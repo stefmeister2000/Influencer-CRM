@@ -166,7 +166,9 @@ Design: clean SaaS, white bg, light-blue accents, card surfaces, sticky bulk-act
 
 ## 8. Setup (local, single-user)
 
-No external services. The database is a local SQLite file created automatically at `./data/orvion.db`.
+No external services, no native modules. The database is a SQLite file (via Node's
+built-in `node:sqlite`) created automatically at `./data/orvion.db`. **Requires
+Node 24+.**
 
 ```bash
 npm install
@@ -178,6 +180,9 @@ Open the app → **Create account** (first account becomes admin; a team + defau
 categories/prompt templates are seeded automatically). The app runs without an
 Anthropic key — scoring and messages then use the built-in rule-based/template
 fallbacks. Add `ANTHROPIC_API_KEY` to enable the AI features.
+
+**Deploying (Railway/Fly/etc.):** set `DATABASE_PATH` to a file on a persistent
+volume — see [`DEPLOY.md`](DEPLOY.md).
 
 > **Note:** the original Supabase/Postgres design is described in sections 1–3
 > above for reference; the running implementation uses local SQLite

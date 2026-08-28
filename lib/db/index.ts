@@ -1,7 +1,24 @@
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
+
+/**
+ * Loose surface over node:sqlite that mirrors the (permissive) better-sqlite3
+ * ergonomics this codebase was written against: statements take `any` params and
+ * return `any`, so callers keep doing `... as SomeType`. Runtime behaviour is
+ * exactly node:sqlite's.
+ */
+interface Stmt {
+  all(...params: any[]): any[];
+  get(...params: any[]): any;
+  run(...params: any[]): { changes: number | bigint; lastInsertRowid: number | bigint };
+}
+interface DB {
+  prepare(sql: string): Stmt;
+  exec(sql: string): void;
+  close(): void;
+}
 
 // --- Schema (SQLite). Enums modeled as TEXT; jsonb as TEXT; bools as 0/1. ---
 const SCHEMA = `
@@ -202,36 +219,66 @@ function dbFilePath(): string {
     : path.join(process.cwd(), "data", "orvion.db");
 }
 
-function open(): Database.Database {
+function open(): DB {
   const file = dbFilePath();
   const dir = path.dirname(file);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  const db = new Database(file);
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
+
+  if (process.env.NODE_ENV === "production" && !process.env.DATABASE_PATH?.trim()) {
+    console.warn(
+      "[db] DATABASE_PATH is not set — the SQLite file is on the container's " +
+      "ephemeral disk. Accounts and data will be LOST on every deploy/restart. " +
+      "Mount a persistent volume and set DATABASE_PATH (see DEPLOY.md).",
+    );
+  }
+
+  const raw = new DatabaseSync(file);
+  const db = raw as unknown as DB;
+  // node:sqlite defaults busy_timeout to 0 (fail immediately on a locked db).
+  // `next build` opens the file from several worker processes at once, so give
+  // writers time to wait it out.
+  db.exec("PRAGMA busy_timeout = 8000");
+  db.exec("PRAGMA journal_mode = WAL");
+  db.exec("PRAGMA foreign_keys = ON");
   db.exec(SCHEMA);
   runMigrations(db);
   return db;
 }
 
 /** Lightweight additive migrations for existing databases. */
-function runMigrations(db: Database.Database) {
+function runMigrations(db: DB) {
   ensureColumn(db, "content_scripts", "language", "text default 'en'");
   ensureColumn(db, "content_scripts", "format", "text default 'video'");
   // Instagram + TikTok: which platform a creator's handle belongs to.
   ensureColumn(db, "influencers", "platform", "text default 'instagram'");
 }
 
-function ensureColumn(db: Database.Database, table: string, column: string, ddl: string) {
-  const cols = db.prepare(`pragma table_info(${table})`).all() as { name: string }[];
+function ensureColumn(db: DB, table: string, column: string, ddl: string) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
   if (!cols.some((c) => c.name === column)) {
     db.exec(`alter table ${table} add column ${column} ${ddl}`);
   }
 }
 
+/**
+ * Run `fn` inside a transaction (node:sqlite has no `.transaction()` helper).
+ * Commits on success, rolls back and rethrows on error.
+ */
+export function tx<T>(fn: () => T): T {
+  db.exec("BEGIN");
+  try {
+    const result = fn();
+    db.exec("COMMIT");
+    return result;
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
+  }
+}
+
 // Singleton across Next.js hot reloads.
-const g = globalThis as unknown as { __orvionDb?: Database.Database };
-export const db: Database.Database = g.__orvionDb ?? (g.__orvionDb = open());
+const g = globalThis as unknown as { __orvionDb?: DB };
+export const db: DB = g.__orvionDb ?? (g.__orvionDb = open());
 
 export const uid = () => randomUUID();
 export const nowIso = () => new Date().toISOString();
@@ -253,7 +300,7 @@ export function seedTeam(teamId: string) {
      (id, team_id, name, prompt, default_product, default_message_angle, created_at, updated_at)
      values (?,?,?,?,?,?,?,?)`,
   );
-  db.transaction(() => {
+  tx(() => {
     for (const name of DEFAULT_CATEGORIES) {
       cat.run(uid(), teamId, name, slugify(name), nowIso());
     }
@@ -261,7 +308,7 @@ export function seedTeam(teamId: string) {
     for (const [name, prompt, product, angle] of DEFAULT_TEMPLATES) {
       tpl.run(uid(), teamId, name, prompt, product, angle, nowIso(), nowIso());
     }
-  })();
+  });
 }
 
 function slugify(s: string) {

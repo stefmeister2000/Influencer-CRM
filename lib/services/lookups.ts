@@ -1,4 +1,4 @@
-import { db, uid, nowIso, insertRow } from "../db";
+import { db, tx, uid, nowIso, insertRow } from "../db";
 import { logEvent } from "./audit";
 
 interface Ctx { teamId: string; userId: string; }
@@ -22,7 +22,7 @@ export function replacePromptLibrary(
      (id, team_id, name, prompt, default_product, default_message_angle, created_by, created_at, updated_at)
      values (?,?,?,?,?,?,?,?,?)`,
   );
-  db.transaction(() => {
+  tx(() => {
     del.run(nowIso(), ctx.teamId);
     for (const s of seeds) {
       ins.run(
@@ -31,7 +31,7 @@ export function replacePromptLibrary(
         ctx.userId, nowIso(), nowIso(),
       );
     }
-  })();
+  });
 }
 
 export function listAffiliates(teamId: string) {
