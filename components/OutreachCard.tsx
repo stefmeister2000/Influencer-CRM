@@ -16,12 +16,12 @@ import { can } from "@/lib/permissions";
 type Item = {
   id: string; kind: string; channel: string; state: string; body: string;
   influencer?: {
-    id: string; instagram_username: string; full_name: string | null;
+    id: string; instagram_username: string; platform?: string | null; full_name: string | null;
     profile_picture_url: string | null; whatsapp?: string | null; email?: string | null;
   };
 };
 
-export function OutreachCard({ item, role }: { item: Item; role: UserRole }) {
+export function OutreachCard({ item, role, businessName }: { item: Item; role: UserRole; businessName?: string }) {
   const inf = item.influencer;
   const [body, setBody] = useState(item.body);
   const [tune, setTune] = useState("");
@@ -34,15 +34,21 @@ export function OutreachCard({ item, role }: { item: Item; role: UserRole }) {
   const run = (fn: () => Promise<unknown>) => start(async () => { await fn(); router.refresh(); });
 
   const handle = (inf?.instagram_username ?? "").replace(/^@/, "");
+  const isTikTok = /tik/i.test(inf?.platform ?? "");
   const waNumber = (inf?.whatsapp ?? "").replace(/[^\d]/g, "");
-  const subject = "Quick idea for a partnership with ORVION";
+  const subject = businessName?.trim()
+    ? `Quick idea for a partnership with ${businessName.trim()}`
+    : "Quick idea for a partnership";
 
-  // Instagram can't pre-fill DM text — so we copy the message, THEN open the DM.
-  function dmInstagram() {
+  // Neither IG nor TikTok pre-fills DM text — copy the message, THEN open the DM/profile.
+  function dmCreator() {
     navigator.clipboard.writeText(body);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
-    window.open(`https://ig.me/m/${handle}`, "_blank", "noopener");
+    const url = isTikTok
+      ? `https://www.tiktok.com/@${handle}`
+      : `https://ig.me/m/${handle}`;
+    window.open(url, "_blank", "noopener");
   }
 
   return (
@@ -92,8 +98,10 @@ export function OutreachCard({ item, role }: { item: Item; role: UserRole }) {
 
           {/* Send buttons — pre-filled where the platform allows it */}
           <div className="flex flex-wrap gap-2 mt-3">
-            <button className="btn-primary py-1 text-xs" onClick={dmInstagram}>
-              {copied ? "Copied — paste in IG (⌘V)" : "DM on Instagram →"}
+            <button className="btn-primary py-1 text-xs" onClick={dmCreator}>
+              {copied
+                ? (isTikTok ? "Copied — paste in TikTok" : "Copied — paste in IG (⌘V)")
+                : (isTikTok ? "Open TikTok →" : "DM on Instagram →")}
             </button>
             {waNumber && (
               <a className="btn-ghost py-1 text-xs text-emerald-700" target="_blank" rel="noreferrer"

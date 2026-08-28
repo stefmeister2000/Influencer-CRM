@@ -37,6 +37,7 @@ create table if not exists influencers (
   team_id text not null references teams(id),
   campaign_id text references campaigns(id),
   instagram_username text not null,
+  platform text not null default 'instagram',   -- instagram | tiktok
   profile_url text, full_name text, bio text, profile_picture_url text,
   follower_count integer, following_count integer, post_count integer,
   avg_likes real, avg_comments real, engagement_rate real,
@@ -150,30 +151,62 @@ create index if not exists idx_scripts_team on content_scripts(team_id, status);
 `;
 
 const DEFAULT_CATEGORIES = [
-  "Hair loss","Men's health","Weight loss","Fitness coach","Personal trainer",
-  "Gym owner","Barber","Hair salon","Beauty creator","Lifestyle creator",
-  "Mom/women's wellness","Medical professional","Clinic","Pharmacy","Nutritionist",
-  "Dietitian","Wellness page","Transformation page","Arabic creator","English creator",
-  "UAE expat creator",
+  "Food & restaurant creator","Foodie / where to eat","Bar & nightlife","Beer & craft beer",
+  "Cocktails & drinks","Sports fan / football","Student life","Lifestyle creator",
+  "Family & things to do","Events & going out","Ghent creator","Hasselt / Limburg creator",
+  "Netherlands creator","Dutch-language creator","Comedy / entertainment","UGC / micro creator",
+  "Travel & city guide","Group & birthday hosting",
 ];
 
+/**
+ * Default business profile for a new team — this instance is set up for O'Learys
+ * (sports bar & restaurant; Ghent & Hasselt in Belgium, plus the Netherlands).
+ * Editable any time in Settings → Business profile.
+ */
+const OLEARYS_BUSINESS = {
+  name: "O'Learys",
+  website: "https://olearys.be",
+  instagram: "",
+  description:
+    "O'Learys is an American (Boston-themed) sports bar & restaurant: burgers, ribs, wings and sharing plates, cocktails and beer, live sport on big screens, arcade games and events, plus group bookings, birthdays, team nights and student deals. Venues in Ghent and Hasselt (Belgium) and across the Netherlands. Audience: students and young adults 18-35, sports fans, groups of friends, families and after-work crowds who go out to eat, drink and watch the game.",
+  location: "Ghent & Hasselt (Belgium) and the Netherlands",
+  offer:
+    "Creator partnership: a hosted visit for you + guests (food & drinks covered), event and match-night invites, and paid collaborations or an affiliate deal on bookings — in exchange for a Reel/TikTok + Stories.",
+  voice:
+    "Fun, energetic, sporty and welcoming. Casual and local — Dutch/Flemish first for Belgium, Dutch for the Netherlands, English where it fits. Never stiff or corporate.",
+};
+
+// name, prompt, product (short label), outreach angle — all O'Learys / Ghent-Hasselt-NL, IG + TikTok.
 const DEFAULT_TEMPLATES: [string, string, string, string][] = [
-  ["UAE hair loss affiliates","Find UAE-based creators for hair loss outreach. Mostly men. Barbers, grooming pages, gym guys, lifestyle pages, Arabic and English, 5k to 100k followers, not celebrities, good for affiliate outreach.","hair_loss","premium online doctor-reviewed hair loss treatment"],
-  ["UAE men's health creators","Find UAE male lifestyle and wellness creators aligned with confidence and men's health. Dubai and Abu Dhabi, 5k-100k followers, clean premium look.","mens_health","discreet doctor-reviewed online men's health care"],
-  ["Dubai barbers","Find Dubai barbers and men's grooming pages with engaged local audiences, 3k-80k followers.","hair_loss","men's confidence and hair support"],
-  ["Abu Dhabi fitness coaches","Find Abu Dhabi fitness coaches and personal trainers focused on transformation, 5k-100k followers.","weight_loss","doctor-reviewed weight management partnership"],
-  ["Arabic women's wellness creators","Find UAE Arabic-speaking women's wellness and lifestyle creators, family/health focus, 5k-100k followers.","wellness","modern discreet online care for wellness"],
-  ["Weight loss transformation pages","Find UAE weight loss and body transformation pages with authentic engagement.","weight_loss","tracked referral weight management partnership"],
-  ["Clinic owners","Find UAE aesthetic/wellness clinic owners and medical influencers open to partnerships.","mens_health","clinical partnership for online doctor-reviewed care"],
-  ["Moms in the UAE","Find UAE-based mom and family creators (Dubai, Abu Dhabi, Sharjah) who share parenting, wellness, postpartum and everyday-life content. English and Arabic, 5k-100k followers, warm relatable tone, authentic engagement.","wellness","discreet doctor-reviewed online care for busy mums (women's wellness, weight, hair)"],
-  ["Lifestyle influencers in the UAE","Find UAE lifestyle influencers covering daily life, fashion, food, fitness and routines. Dubai and Abu Dhabi, English and Arabic, 5k-100k followers, clean premium aesthetic, not celebrities.","wellness","premium modern doctor-reviewed online health & wellness"],
-  ["Everyday UAE voices (normal people)","Find regular everyday people in the UAE who casually talk about their life, health, routines and opinions on camera — relatable micro-creators and UGC-style accounts, not polished influencers. English and Arabic, 1k-50k followers, authentic and trusted by their audience.","wellness","relatable, honest doctor-reviewed online care for everyday people"],
+  ["Ghent food & foodie creators","Find Ghent-based food, restaurant and 'where to eat' creators on Instagram and TikTok who review spots, do food tours and post what's new in the city. 2k-60k followers, authentic local engagement, not celebrities.","hosted tasting + paid collab","invite them for a hosted tasting at O'Learys Ghent and a Reel/TikTok"],
+  ["Hasselt & Limburg lifestyle","Find Hasselt and Limburg lifestyle, food and going-out creators on Instagram and TikTok who post about local bars, restaurants and events. 2k-50k followers, strong regional audience.","hosted visit + event invites","host them at O'Learys Hasselt for a match night or dinner"],
+  ["Netherlands food & nightlife","Find Dutch food, horeca and nightlife creators on TikTok and Instagram (Randstad and student cities) covering restaurants, bars and student life. 5k-100k followers, Dutch-language, real engagement.","paid collab + booking affiliate","partner for a visit to an O'Learys NL venue plus TikTok content"],
+  ["Student creators (Ghent)","Find student creators and study-life accounts in Ghent on TikTok and Instagram — student deals, nights out, campus life. 1k-40k followers, trusted by a local student audience.","student night promo + free entry/food","get them to a student night at O'Learys Ghent"],
+  ["Sports & football fans","Find Belgian and Dutch football and sports fan creators and watch-party accounts on Instagram and TikTok who post match reactions and where-to-watch content. 3k-80k followers.","match-night hosting + collab","make O'Learys their go-to spot to watch the game"],
+  ["Families & things to do","Find family, parenting and 'things to do with kids' creators in East/West Flanders, Limburg and the Netherlands on Instagram and TikTok. 3k-60k followers, warm local tone.","hosted family visit","invite them for a family meal and games at O'Learys"],
+  ["Beer, cocktails & bar culture","Find craft beer, cocktail and bar-culture creators in Belgium and the Netherlands on Instagram and TikTok. 2k-50k followers, authentic taste-focused content.","hosted tasting + collab","a drinks-focused visit and content collab"],
+  ["Micro & UGC everyday voices","Find relatable micro-creators and UGC-style accounts in Ghent, Hasselt and the Netherlands on TikTok and Instagram who casually vlog daily life, food and nights out. 500-20k followers, high trust with their audience.","hosted visit + gifted","an authentic, low-key visit and honest post"],
 ];
+
+/**
+ * Where the SQLite file lives.
+ * - Local dev: ./data/orvion.db (default).
+ * - Hosted (Railway/Fly/etc.): the container filesystem is EPHEMERAL, so point
+ *   DATABASE_PATH at a mounted persistent volume, e.g. /data/orvion.db, or every
+ *   deploy wipes all accounts and data.
+ */
+function dbFilePath(): string {
+  const fromEnv = process.env.DATABASE_PATH?.trim();
+  return fromEnv && fromEnv.length > 0
+    ? path.resolve(fromEnv)
+    : path.join(process.cwd(), "data", "orvion.db");
+}
 
 function open(): Database.Database {
-  const dataDir = path.join(process.cwd(), "data");
-  if (!existsSync(dataDir)) mkdirSync(dataDir, { recursive: true });
-  const db = new Database(path.join(dataDir, "orvion.db"));
+  const file = dbFilePath();
+  const dir = path.dirname(file);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  const db = new Database(file);
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
   db.exec(SCHEMA);
@@ -185,6 +218,8 @@ function open(): Database.Database {
 function runMigrations(db: Database.Database) {
   ensureColumn(db, "content_scripts", "language", "text default 'en'");
   ensureColumn(db, "content_scripts", "format", "text default 'video'");
+  // Instagram + TikTok: which platform a creator's handle belongs to.
+  ensureColumn(db, "influencers", "platform", "text default 'instagram'");
 }
 
 function ensureColumn(db: Database.Database, table: string, column: string, ddl: string) {
@@ -201,29 +236,32 @@ export const db: Database.Database = g.__orvionDb ?? (g.__orvionDb = open());
 export const uid = () => randomUUID();
 export const nowIso = () => new Date().toISOString();
 
-/** Seed default categories + prompt templates for a newly created team. */
+/**
+ * Seed a newly created team: default categories, the O'Learys business profile,
+ * and an O'Learys-focused prompt library (Ghent / Hasselt / Netherlands,
+ * Instagram + TikTok). Everything is editable later in Settings / Prompt library.
+ */
 export function seedTeam(teamId: string) {
   const cat = db.prepare(
     "insert into categories (id, team_id, name, slug, is_default, created_at) values (?,?,?,?,1,?)",
   );
-  const insertCats = db.transaction(() => {
-    for (const name of DEFAULT_CATEGORIES) {
-      cat.run(uid(), teamId, name, slugify(name), nowIso());
-    }
-  });
-  insertCats();
-
+  const setting = db.prepare(
+    "insert or replace into settings (team_id, key, value, updated_at) values (?,?,?,?)",
+  );
   const tpl = db.prepare(
     `insert into prompt_templates
      (id, team_id, name, prompt, default_product, default_message_angle, created_at, updated_at)
      values (?,?,?,?,?,?,?,?)`,
   );
-  const insertTpls = db.transaction(() => {
+  db.transaction(() => {
+    for (const name of DEFAULT_CATEGORIES) {
+      cat.run(uid(), teamId, name, slugify(name), nowIso());
+    }
+    setting.run(teamId, "business_profile", JSON.stringify(OLEARYS_BUSINESS), nowIso());
     for (const [name, prompt, product, angle] of DEFAULT_TEMPLATES) {
       tpl.run(uid(), teamId, name, prompt, product, angle, nowIso(), nowIso());
     }
-  });
-  insertTpls();
+  })();
 }
 
 function slugify(s: string) {

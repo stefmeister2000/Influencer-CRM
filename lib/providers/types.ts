@@ -31,11 +31,16 @@ export interface ProfileProvider {
   fetchBasicMetrics(username: string): Promise<Partial<NormalizedProfile>>;
 }
 
-/** Compute engagement_rate from metrics in a consistent way. */
+/** Normalize a raw profile: clean the handle, set platform + a canonical URL. */
 export function normalizeProfileData(p: NormalizedProfile): NormalizedProfile {
   const out = { ...p };
   out.instagram_username = out.instagram_username.trim().replace(/^@/, "").toLowerCase();
-  if (!out.profile_url) out.profile_url = `https://instagram.com/${out.instagram_username}`;
+  out.platform = /tik\s*tok|tiktok|^tt$/i.test(String(out.platform ?? "")) ? "tiktok" : "instagram";
+  if (!out.profile_url) {
+    out.profile_url = out.platform === "tiktok"
+      ? `https://www.tiktok.com/@${out.instagram_username}`
+      : `https://instagram.com/${out.instagram_username}`;
+  }
   if (out.engagement_rate == null && out.follower_count && (out.avg_likes || out.avg_comments)) {
     out.engagement_rate =
       (((out.avg_likes ?? 0) + (out.avg_comments ?? 0)) / out.follower_count) * 100;

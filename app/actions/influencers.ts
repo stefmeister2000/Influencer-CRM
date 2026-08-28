@@ -20,6 +20,7 @@ export async function addInfluencerAction(formData: FormData) {
 
   const profile = normalizeProfileData({
     instagram_username: String(formData.get("instagram_username") ?? "").trim(),
+    platform: (s(formData, "platform") === "tiktok" ? "tiktok" : "instagram"),
     full_name: s(formData, "full_name"),
     profile_url: s(formData, "profile_url"),
     country: s(formData, "country"),

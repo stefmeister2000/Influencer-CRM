@@ -5,7 +5,8 @@ export type ScriptStatus = "draft" | "in_progress" | "video_made";
 export interface ContentScript {
   id: string;
   team_id: string;
-  category: string;
+  /** Free-text topic/subject for the piece (stored in the legacy `category` column). */
+  topic: string;
   brief: string | null;
   body: string;
   status: ScriptStatus;
@@ -19,14 +20,14 @@ export interface ContentScript {
 interface Ctx { teamId: string; userId: string; }
 
 export function saveScript(ctx: Ctx, args: {
-  category: string; brief: string; body: string; usedWebSearch: boolean;
+  topic: string; brief: string; body: string; usedWebSearch: boolean;
   language?: string; format?: string;
 }): ContentScript {
   const id = uid();
   insertRow("content_scripts", {
     id,
     team_id: ctx.teamId,
-    category: args.category,
+    category: args.topic || "general",
     brief: args.brief || null,
     body: args.body,
     status: "draft",
@@ -41,23 +42,23 @@ export function saveScript(ctx: Ctx, args: {
   return getScript(ctx.teamId, id);
 }
 
-/** Recent English scripts in a category — used to avoid repeating angles. */
-export function recentScriptsForCategory(teamId: string, category: string, limit = 8): ContentScript[] {
+/** Recent English scripts — used to tell the AI what angles to avoid repeating. */
+export function recentScripts(teamId: string, limit = 8): ContentScript[] {
   return db.prepare(
-    `select * from content_scripts
-     where team_id = ? and category = ? and deleted_at is null and (language = 'en' or language is null)
+    `select *, category as topic from content_scripts
+     where team_id = ? and deleted_at is null and (language = 'en' or language is null)
      order by created_at desc limit ?`,
-  ).all(teamId, category, limit) as ContentScript[];
+  ).all(teamId, limit) as ContentScript[];
 }
 
 export function getScript(teamId: string, id: string): ContentScript {
-  return db.prepare("select * from content_scripts where id = ? and team_id = ?")
+  return db.prepare("select *, category as topic from content_scripts where id = ? and team_id = ?")
     .get(id, teamId) as ContentScript;
 }
 
 export function listScripts(teamId: string): ContentScript[] {
   return db.prepare(
-    "select * from content_scripts where team_id = ? and deleted_at is null order by created_at desc",
+    "select *, category as topic from content_scripts where team_id = ? and deleted_at is null order by created_at desc",
   ).all(teamId) as ContentScript[];
 }
 

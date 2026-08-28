@@ -6,7 +6,6 @@ import {
   setScriptStatusAction, deleteScriptAction, updateScriptBodyAction, translateScriptAction,
 } from "@/app/actions/content";
 import type { ContentScript, ScriptStatus } from "@/lib/services/scripts";
-import { SCRIPT_CATEGORIES } from "@/lib/ai/scriptWriter";
 import { formatDate } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
 import { can } from "@/lib/permissions";
@@ -17,7 +16,10 @@ const STATUSES: { value: ScriptStatus; label: string; color: string }[] = [
   { value: "video_made", label: "Video made", color: "bg-emerald-100 text-emerald-800" },
 ];
 
-const catLabel = (v: string) => SCRIPT_CATEGORIES.find((c) => c.value === v)?.label ?? v;
+const topicLabel = (v: string) => {
+  const t = (v || "general").trim();
+  return t.length > 40 ? t.slice(0, 40) + "…" : t;
+};
 
 export function SavedScripts({ scripts, role }: { scripts: ContentScript[]; role: UserRole }) {
   const [filter, setFilter] = useState<ScriptStatus | "all">("all");
@@ -66,11 +68,11 @@ function ScriptCard({ script, role }: { script: ContentScript; role: UserRole })
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="badge bg-brand-50 text-brand-700">{catLabel(script.category)}</span>
+            <span className="badge bg-brand-50 text-brand-700">{topicLabel(script.topic)}</span>
             <span className="badge bg-slate-100 text-slate-600">
               {script.format === "linkedin" ? "LinkedIn" : "Video"}
             </span>
-            {script.language === "ar" && <span className="badge bg-emerald-50 text-emerald-700">Arabic</span>}
+            {script.language === "nl" && <span className="badge bg-emerald-50 text-emerald-700">Dutch</span>}
             <StatusPill status={script.status} />
             <span className="text-xs text-ink-500">{formatDate(script.created_at)}</span>
           </div>
@@ -99,12 +101,11 @@ function ScriptCard({ script, role }: { script: ContentScript; role: UserRole })
       {open && (
         <div className="mt-3">
           {editing ? (
-            <textarea dir={script.language === "ar" ? "rtl" : "ltr"}
+            <textarea
               className="input min-h-[220px] font-mono text-[13px] leading-relaxed"
               value={body} onChange={(e) => setBody(e.target.value)} />
           ) : (
-            <pre dir={script.language === "ar" ? "rtl" : "ltr"}
-              className="text-sm text-ink-800 whitespace-pre-wrap font-sans">{script.body}</pre>
+            <pre className="text-sm text-ink-800 whitespace-pre-wrap font-sans">{script.body}</pre>
           )}
 
           <div className="flex flex-wrap gap-2 mt-3">
@@ -112,10 +113,10 @@ function ScriptCard({ script, role }: { script: ContentScript; role: UserRole })
               onClick={() => { navigator.clipboard.writeText(script.body); setCopied(true); }}>
               {copied ? "Copied" : "Copy"}
             </button>
-            {can.write(role) && script.language !== "ar" && (
+            {can.write(role) && script.language !== "nl" && (
               <button className="btn-ghost py-1 text-xs" disabled={pending}
                 onClick={() => start(async () => { await translateScriptAction(script.id); refresh(); })}>
-                {pending ? "Translating…" : "Translate to Arabic"}
+                {pending ? "Translating…" : "Translate to Dutch"}
               </button>
             )}
             {can.write(role) && !editing && (

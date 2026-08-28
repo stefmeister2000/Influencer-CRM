@@ -11,8 +11,13 @@ import { formatNumber, formatPct, titleCase } from "@/lib/utils";
 import type { Influencer, UserRole, FilterParams } from "@/lib/types";
 import { can } from "@/lib/permissions";
 
-const shortCountry = (c?: string | null) =>
-  c && /united arab emirates/i.test(c) ? "UAE" : (c ?? "");
+const shortCountry = (c?: string | null) => {
+  if (!c) return "";
+  if (/united arab emirates/i.test(c)) return "UAE";
+  if (/netherlands|nederland/i.test(c)) return "NL";
+  if (/belgium|belgi[eë]/i.test(c)) return "BE";
+  return c;
+};
 
 /**
  * Compact, fixed-width influencer table with OPTIMISTIC actions. Delete removes
@@ -126,7 +131,10 @@ export function InfluencerTable({
                       </Link>
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs text-ink-500 truncate">@{i.instagram_username}</span>
-                        <HandleActions username={i.instagram_username} />
+                        <span className="badge bg-slate-100 text-slate-600 text-[10px] uppercase">
+                          {/tik/i.test(i.platform ?? "") ? "TikTok" : "IG"}
+                        </span>
+                        <HandleActions username={i.instagram_username} platform={i.platform} />
                       </div>
                     </div>
                   </div>

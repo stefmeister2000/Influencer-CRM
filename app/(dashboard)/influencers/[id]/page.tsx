@@ -15,13 +15,21 @@ export default function InfluencerDetail({ params }: { params: { id: string } })
   const notes = listNotes(params.id);
   const events = listEvents(params.id);
 
+  const isTikTok = /tik/i.test(inf.platform ?? "");
+  const profileHref = inf.profile_url
+    ?? (isTikTok
+      ? `https://www.tiktok.com/@${inf.instagram_username}`
+      : `https://instagram.com/${inf.instagram_username}`);
+
   return (
     <div>
       <PageHeader
         title={inf.full_name ?? inf.instagram_username}
         subtitle={`@${inf.instagram_username}`}
-        action={<a href={inf.profile_url ?? `https://instagram.com/${inf.instagram_username}`}
-          target="_blank" rel="noreferrer" className="btn-ghost">Open Instagram ↗</a>}
+        action={<a href={profileHref}
+          target="_blank" rel="noreferrer" className="btn-ghost">
+          {isTikTok ? "Open TikTok ↗" : "Open Instagram ↗"}
+        </a>}
       />
 
       <div className="grid lg:grid-cols-3 gap-4">
@@ -49,6 +57,7 @@ export default function InfluencerDetail({ params }: { params: { id: string } })
               <Row k="WhatsApp" v={inf.whatsapp} />
               <Row k="Website" v={inf.website} />
               <Row k="Language" v={inf.language} />
+              <Row k="Platform" v={isTikTok ? "TikTok" : "Instagram"} />
               <Row k="Category" v={titleCase(inf.category ?? "")} />
               <Row k="Source" v={titleCase(inf.source)} />
             </div>

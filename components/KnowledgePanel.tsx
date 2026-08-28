@@ -16,10 +16,10 @@ export function KnowledgePanel({ initial }: { initial: string }) {
         onClick={() => setOpen((o) => !o)}
       >
         <div>
-          <h2 className="font-semibold text-ink-900">Brand knowledge</h2>
+          <h2 className="font-semibold text-ink-900">Context / knowledge (optional)</h2>
           <p className="text-xs text-ink-500">
-            Tell the AI about ORVION, your pages, offers and audience so every script is on-point.
-            {initial ? "" : " (empty — add some)"}
+            Optional. Tell the AI who this content is for, your positioning, offers, links and tone so every script fits.
+            {initial ? "" : " (empty)"}
           </p>
         </div>
         <span className="text-ink-500">{open ? "▲" : "▼"}</span>
@@ -30,13 +30,11 @@ export function KnowledgePanel({ initial }: { initial: string }) {
           <textarea
             className="input min-h-[160px]"
             placeholder={`e.g.
-- ORVION is a UAE online doctor-reviewed health platform (orvionresearch.com).
-- Weight loss: medical program, consultations online, discreet.
-- Hair loss (men) and women's hair: treatment plans reviewed by doctors.
-- Peptides: wellness/recovery/performance, science-led.
-- Tone: premium, trustworthy, modern, not salesy.
-- Audience: UAE, English + Arabic, 25-45.
-- Always drive to: link in bio / book a consultation.`}
+- Who this is for: [audience / niche].
+- What we do / sell: [product, service or personal brand].
+- Positioning & tone: [e.g. premium, playful, contrarian, expert].
+- Key offers / links: [link in bio, waitlist, book a call…].
+- Anything to always mention or always avoid.`}
             value={text}
             onChange={(e) => { setText(e.target.value); setSaved(false); }}
           />

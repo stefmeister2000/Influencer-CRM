@@ -44,6 +44,7 @@ export function csvRowToProfile(row: Record<string, string>): NormalizedProfile 
   if (!username) return null;
   return normalizeProfileData({
     instagram_username: username,
+    platform: /tik/i.test(row.platform || "") ? "tiktok" : "instagram",
     profile_url: row.profile_url || null,
     full_name: row.full_name || null,
     bio: row.bio || null,
@@ -73,7 +74,7 @@ export function toCsv(rows: Record<string, unknown>[], columns: string[]): strin
 }
 
 export const EXPORT_COLUMNS = [
-  "instagram_username", "full_name", "profile_url", "follower_count",
+  "instagram_username", "platform", "full_name", "profile_url", "follower_count",
   "engagement_rate", "country", "city", "language", "category", "email",
   "whatsapp", "product_fit", "final_score", "status", "outreach_status",
   "affiliate_status", "created_at",

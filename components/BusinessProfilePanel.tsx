@@ -22,7 +22,7 @@ export function BusinessProfilePanel({ initial }: { initial: BusinessProfile }) 
           <Field name="name" label="Business name *" value={initial.name} placeholder="e.g. Acme Skincare" required />
           <Field name="website" label="Website" value={initial.website} placeholder="https://…" />
           <Field name="instagram" label="Instagram" value={initial.instagram} placeholder="@yourbrand" />
-          <Field name="location" label="Target market / location" value={initial.location} placeholder="e.g. UAE, or Global / US" />
+          <Field name="location" label="Target market / location" value={initial.location} placeholder="e.g. Ghent & Hasselt (Belgium), Netherlands" />
         </div>
         <Area name="description" label="What you do — product, service, target customer *"
           value={initial.description}

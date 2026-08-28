@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ORVION — Influencer CRM",
-  description: "Compliant influencer discovery, outreach & CRM for ORVION",
+  title: "O'Learys — Influencer CRM",
+  description: "Creator discovery, outreach & CRM for O'Learys (Ghent, Hasselt, Netherlands).",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

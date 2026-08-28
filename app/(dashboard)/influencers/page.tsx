@@ -20,6 +20,7 @@ export default function InfluencersPage({
   const filters: FilterParams = {
     q: searchParams.q,
     view,
+    platform: searchParams.platform,
     country: searchParams.country,
     city: searchParams.city,
     category: searchParams.category,

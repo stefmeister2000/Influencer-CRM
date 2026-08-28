@@ -1,8 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { anthropic, MODEL, aiConfigured } from "./anthropic";
 
-export type ScriptCategory = "weight_loss" | "hair_loss" | "mens_health" | "womens_hair" | "peptides" | "founder";
-
 /** Output format: short spoken video, or a written LinkedIn post. */
 export type ScriptFormat = "video" | "linkedin";
 
@@ -11,82 +9,11 @@ export const SCRIPT_FORMATS: { value: ScriptFormat; label: string }[] = [
   { value: "linkedin", label: "LinkedIn post" },
 ];
 
-/** For the Founder category: who the piece is targeting (drives tone + CTA). */
-export type FounderAngle = "course" | "saas" | "clinic";
-
-export const FOUNDER_ANGLES: { value: FounderAngle; label: string; guidance: string }[] = [
-  {
-    value: "course",
-    label: "Sell the course",
-    guidance:
-      "TARGET: aspiring entrepreneurs / ecommerce operators who want to BUILD their own telehealth + ecommerce business. TONE: aspirational but proof-driven, contrarian, opportunity-focused — show there's a repeatable system to learn. CTA: join the course / waitlist or DM a keyword. Sell the transformation (you can start this model yourself), not features.",
-  },
-  {
-    value: "saas",
-    label: "Ecommerce / SaaS (white-label)",
-    guidance:
-      "TARGET: founders and operators who want the white-label telehealth SOFTWARE to launch fast. TONE: product-led, ROI and speed-to-market, scalable-business angle. CTA: get a demo / DM for access. Emphasize launching your own branded telehealth platform without building from scratch.",
-  },
-  {
-    value: "clinic",
-    label: "Clinics & pharma",
-    guidance:
-      "TARGET: clinic owners, medical practices and pharma decision-makers. TONE: credible, professional, industry-shift and partnership/authority — more B2B. CTA: book a call / partner with us. Frame telehealth + white-label as how clinics and pharma add a modern revenue stream and avoid being left behind.",
-  },
-];
-
-export const SCRIPT_CATEGORIES: { value: ScriptCategory; label: string; context: string }[] = [
-  {
-    value: "weight_loss",
-    label: "Weight loss",
-    context:
-      "ORVION's doctor-reviewed online weight loss / medical weight management program (UAE). Audience: people frustrated with diets, wanting a modern medical-backed approach.",
-  },
-  {
-    value: "hair_loss",
-    label: "Hair loss (men)",
-    context:
-      "ORVION's discreet doctor-reviewed online hair loss treatment for men (UAE). Audience: men noticing thinning/receding hair, self-conscious, want a private modern solution.",
-  },
-  {
-    value: "mens_health",
-    label: "Men's health",
-    context:
-      "ORVION's discreet doctor-reviewed online men's health care (UAE) — energy, performance, libido/ED, testosterone & hormone health, confidence. See orvionresearch.com/mens-health. Audience: men who want private, modern, expert help with energy, performance and confidence without an awkward clinic visit.",
-  },
-  {
-    value: "womens_hair",
-    label: "Women's hair",
-    context:
-      "ORVION's doctor-reviewed treatment for women's hair loss / thinning / shedding (UAE). Audience: women dealing with thinning, postpartum shedding, or breakage who want expert help.",
-  },
-  {
-    value: "peptides",
-    label: "Peptides",
-    context:
-      "ORVION's peptides for wellness, recovery, performance and longevity (UAE, doctor-reviewed). Audience: health-optimizers, gym-goers, biohackers curious about peptides.",
-  },
-  {
-    value: "founder",
-    label: "Founder",
-    context:
-      "The FOUNDER's personal brand. A biohacking + ecommerce entrepreneur building ORVION — a telehealth brand AND a white-label telehealth software other clinics/pharma/entrepreneurs can run their own version of. Content goals: (1) go viral and build authority, (2) attract clinics, pharma and entrepreneurs to launch their own telehealth business on the white-label software, (3) sell high-ticket ecommerce / telehealth courses, (4) mix in biohacking, peptides and health-optimization insight, (5) B2B thought-leadership. Positioning: the biohacking ecommerce guru who turned telehealth into a scalable business. CTA varies by post: DM a keyword, link in bio, book a call, join the course/waitlist, or get a software demo — pick what fits the angle.",
-  },
-];
-
-// --- Persona blocks (topic + goals + voice) ---
-const PRODUCT_PERSONA = `You are ORVION's elite short-form content scriptwriter for
-a premium UAE-based, doctor-reviewed online health platform. You write viral-grade
-content that speaks to patients/consumers and drives them to ORVION's care.`;
-
-const FOUNDER_PERSONA = `You are the ghostwriter for the FOUNDER of ORVION — a
-biohacking + ecommerce entrepreneur. You write viral, high-status, story-driven
-content that builds the founder's personal brand and generates B2B + course leads.
-You can be bold, contrarian and opinionated. Speak founder-to-audience ("I/we"),
-not brand-to-customer. Blend ecommerce/business lessons, telehealth/white-label
-software, and biohacking/peptides insight. The goal is reach + authority + leads
-(clinics/pharma/entrepreneurs wanting their own telehealth business, and course
-buyers).`;
+// --- Persona (topic-agnostic) ---
+const PERSONA = `You are an elite short-form content scriptwriter. You write
+viral-grade content on whatever topic you're given. You know what makes people
+stop scrolling, keep watching, and act. You adapt tone and voice to the topic and
+audience described in the brief.`;
 
 // --- Format blocks (structure) ---
 const VIDEO_FORMAT = `FORMAT: a spoken short-form VIDEO script for TikTok / Instagram
@@ -106,17 +33,15 @@ const LINKEDIN_FORMAT = `FORMAT: a written LINKEDIN POST.
   soft CTA and optionally 2-4 relevant hashtags on the last line.
 - ~80-220 words.`;
 
-const COMPLIANCE = `COMPLIANCE (non-negotiable):
-- No medical guarantees, no "cure", no "guaranteed results", no fake success
-  percentages, no naming prescription medications.
-- Be responsible with peptides/biohacking — educational and honest, not hype or
-  miracle claims. Premium, credible tone.`;
+const COMPLIANCE = `RESPONSIBLE CONTENT:
+- No false claims, fake statistics, fabricated testimonials, or guarantees.
+- For health, finance, legal or other sensitive topics: be educational and honest,
+  not hype or miracle claims. Keep a credible tone.`;
 
 const OUTPUT = `OUTPUT — Output ONLY the post/script text. No preamble, no "Here's
 your script", no analysis, no citations. Just the content, with line breaks.`;
 
-function buildSystem(category: ScriptCategory, format: ScriptFormat, withSearch: boolean): string {
-  const persona = category === "founder" ? FOUNDER_PERSONA : PRODUCT_PERSONA;
+function buildSystem(format: ScriptFormat, withSearch: boolean): string {
   const fmt = format === "linkedin" ? LINKEDIN_FORMAT : VIDEO_FORMAT;
   const process = withSearch
     ? `PROCESS: Do a QUICK web search (1-2 searches, don't over-research) for what is
@@ -124,7 +49,7 @@ currently going viral / trending around this topic — hooks, formats, angles, p
 points, debates. Pick the single strongest angle, then write ONE piece.`
     : `PROCESS: Use your knowledge of what goes viral around this topic (hooks,
 formats, pain points, debates) to pick the strongest angle, then write ONE piece.`;
-  return [persona, process, fmt, COMPLIANCE, OUTPUT].join("\n\n");
+  return [PERSONA, process, fmt, COMPLIANCE, OUTPUT].join("\n\n");
 }
 
 export interface ScriptResult {
@@ -133,35 +58,27 @@ export interface ScriptResult {
 }
 
 /**
- * Generate viral content for a category + format + user brief. Uses Anthropic's web
+ * Generate viral content for a topic + format + user brief. Uses Anthropic's web
  * search tool to ground it in what's currently trending; falls back to a no-tools
  * generation if web search is unavailable, and to a template if no key.
  */
 export async function generateScript(args: {
-  category: ScriptCategory;
+  topic: string;
   brief: string;
   knowledge?: string;
   avoid?: string[];
   format?: ScriptFormat;
-  founderAngle?: FounderAngle;
 }): Promise<ScriptResult> {
-  const cat = SCRIPT_CATEGORIES.find((c) => c.value === args.category) ?? SCRIPT_CATEGORIES[0];
+  const topic = args.topic.trim() || "(general)";
   const format: ScriptFormat = args.format ?? "video";
   const pieceWord = format === "linkedin" ? "LinkedIn post" : "video script";
 
   if (!aiConfigured()) {
-    return { script: fallbackScript(cat.label, args.brief, format), usedWebSearch: false };
+    return { script: fallbackScript(topic, args.brief, format), usedWebSearch: false };
   }
 
-  const angleBlock =
-    args.category === "founder"
-      ? `\nFOUNDER ANGLE — ${
-          (FOUNDER_ANGLES.find((a) => a.value === (args.founderAngle ?? "course")) ?? FOUNDER_ANGLES[0]).guidance
-        }\n`
-      : "";
-
   const knowledgeBlock = args.knowledge?.trim()
-    ? `\nIMPORTANT BRAND KNOWLEDGE — use this to focus the content (pages, offers, positioning, audience):\n${args.knowledge.trim()}\n`
+    ? `\nCONTEXT / KNOWLEDGE — use this to focus the content (who it's for, positioning, offers, links, tone):\n${args.knowledge.trim()}\n`
     : "";
 
   const avoidBlock = args.avoid?.length
@@ -171,10 +88,8 @@ export async function generateScript(args: {
     : "";
 
   const userPrompt =
-    `Category: ${cat.label}\n` +
-    `Context: ${cat.context}\n` +
+    `Topic: ${topic}\n` +
     `Output format: ${pieceWord}\n` +
-    angleBlock +
     knowledgeBlock +
     avoidBlock +
     `\nWhat we want:\n${args.brief.trim() || "(no extra notes — use your best judgment for a high-performing piece)"}\n\n` +
@@ -185,7 +100,7 @@ export async function generateScript(args: {
     const res = await anthropic().messages.create({
       model: MODEL,
       max_tokens: 1800,
-      system: buildSystem(args.category, format, true),
+      system: buildSystem(format, true),
       tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 } as any],
       messages: [{ role: "user", content: userPrompt }],
     });
@@ -199,41 +114,40 @@ export async function generateScript(args: {
   const res = await anthropic().messages.create({
     model: MODEL,
     max_tokens: 1600,
-    system: buildSystem(args.category, format, false),
+    system: buildSystem(format, false),
     messages: [{ role: "user", content: userPrompt }],
   });
   return { script: clean(extractText(res)), usedWebSearch: false };
 }
 
-const ARABIC_SYSTEM = `You are an elite Arabic short-form scriptwriter for Instagram
-Reels and TikTok in the Gulf/UAE market. You TRANSCREATE — never translate
-literally. You take an English health-brand script and rewrite it as a natural,
-punchy, native-sounding Arabic script that would actually go viral with a UAE/Gulf
+const DUTCH_SYSTEM = `You are an elite Dutch short-form scriptwriter for Instagram
+Reels and TikTok in the Belgian/Dutch market. You TRANSCREATE — never translate
+literally. You take an English script and rewrite it as a natural, punchy,
+native-sounding Dutch script that would actually go viral with a Flemish/Dutch
 audience.
 
 RULES:
-- Use clear Modern Standard Arabic with a light, natural Gulf flavor — the way
-  real creators speak, not stiff formal Arabic and not heavy slang.
+- Use natural, spoken Dutch — the way real creators in Flanders and the
+  Netherlands talk, not stiff or formal. Light, current, not cringe.
 - Keep the SAME core idea, hook strength, and call to action, but make every line
-  feel born in Arabic. Adapt idioms, rhythm and cultural references.
+  feel born in Dutch. Adapt idioms, rhythm and references.
 - Open with an equally strong scroll-stopping hook in the first line.
-- Same compliance rules: no medical guarantees, no "cure", no naming prescription
-  medications, responsible and premium tone.
-- OUTPUT ONLY the Arabic script text. No transliteration, no English, no notes,
-  no preamble. Just the Arabic words to say/show, with line breaks.`;
+- Keep it responsible: no false claims, no fabricated statistics, credible tone.
+- OUTPUT ONLY the Dutch script text. No English, no notes, no preamble.
+  Just the Dutch words to say/show, with line breaks.`;
 
-/** Transcreate an English script into a high-quality viral Arabic script. */
-export async function translateToArabic(script: string, knowledge?: string): Promise<string> {
+/** Transcreate an English script into a high-quality viral Dutch script. */
+export async function translateToDutch(script: string, knowledge?: string): Promise<string> {
   if (!aiConfigured()) return script;
   const res = await anthropic().messages.create({
     model: MODEL,
     max_tokens: 1600,
-    system: ARABIC_SYSTEM,
+    system: DUTCH_SYSTEM,
     messages: [{
       role: "user",
       content:
-        (knowledge?.trim() ? `Brand knowledge (for context):\n${knowledge.trim()}\n\n` : "") +
-        `Transcreate this into a viral Arabic Reels/TikTok script:\n\n${script}`,
+        (knowledge?.trim() ? `Context (for reference):\n${knowledge.trim()}\n\n` : "") +
+        `Transcreate this into a viral Dutch Reels/TikTok script:\n\n${script}`,
     }],
   });
   return clean(extractText(res));
@@ -289,27 +203,26 @@ function clean(text: string): string {
   return t.trim();
 }
 
-function fallbackScript(category: string, brief: string, format: ScriptFormat): string {
+function fallbackScript(topic: string, brief: string, format: ScriptFormat): string {
+  const t = topic.toLowerCase();
   if (format === "linkedin") {
-    return `Most people think ${category.toLowerCase()} is a product problem.
+    return `Most people get ${t} completely backwards.
 
-It's not. It's a trust problem.
+They focus on the tactic. They ignore the fundamentals.
 
-We built ORVION around one idea: make expert, doctor-reviewed care feel modern, private and effortless — and make that same engine available to other operators as white-label software.
-
-The lesson for founders: don't sell the thing. Sell the new standard.
+Here's what actually moves the needle: a clear plan, consistent execution, and honest feedback loops.
 
 ${brief ? brief : ""}
 
-If you're building in telehealth or ecommerce, let's talk.`.trim();
+If this resonates, follow for more.`.trim();
   }
-  return `Nobody tells you this about ${category.toLowerCase()}…
+  return `Nobody tells you this about ${t}…
 
-If you've tried everything and nothing's working, it's probably not your fault — it's the approach.
+If you've tried everything and nothing's working, it's probably not you — it's the approach.
 
-Most people guess. They copy random advice online and hope.
+Most people just copy random advice online and hope.
 
-The difference: a real plan, reviewed by actual experts, built around you.
+The difference is having a real plan and sticking to it.
 
 ${brief ? brief : ""}
 

@@ -2,25 +2,41 @@
 
 import { useState, useTransition } from "react";
 import { parsePromptAction, createCampaignAction } from "@/app/actions/campaigns";
-import type { DiscoveryFilters } from "@/lib/types";
+import type { CreatorPlatform, DiscoveryFilters } from "@/lib/types";
 
 type Template = { id: string; name: string; prompt: string; default_product: string | null };
 
+const LOCATIONS = [
+  { value: "Ghent", label: "Ghent" },
+  { value: "Hasselt", label: "Hasselt" },
+  { value: "Netherlands", label: "Netherlands" },
+];
+const PLATFORMS: { value: CreatorPlatform; label: string }[] = [
+  { value: "instagram", label: "Instagram" },
+  { value: "tiktok", label: "TikTok" },
+];
+
 export function DiscoveryWizard({ templates }: { templates: Template[] }) {
   const [prompt, setPrompt] = useState("");
+  const [locations, setLocations] = useState<string[]>(["Ghent"]);
+  const [platforms, setPlatforms] = useState<CreatorPlatform[]>(["instagram", "tiktok"]);
   const [filters, setFilters] = useState<DiscoveryFilters | null>(null);
   const [name, setName] = useState("");
-  const [payout, setPayout] = useState(200);
+  const [payout, setPayout] = useState(0);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  const toggle = <T,>(list: T[], v: T, set: (x: T[]) => void) =>
+    set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+
   function parse() {
     setError(null);
+    if (!platforms.length) { setError("Pick at least one platform."); return; }
     start(async () => {
       try {
-        const f = await parsePromptAction(prompt);
+        const f = await parsePromptAction(prompt, { regions: locations, platforms });
         setFilters(f);
-        if (!name) setName(suggestName(f));
+        if (!name) setName(suggestName(f, locations, platforms));
       } catch (e: any) {
         setError(e.message ?? "Failed to parse prompt");
       }
@@ -51,10 +67,46 @@ export function DiscoveryWizard({ templates }: { templates: Template[] }) {
     <div className="grid md:grid-cols-2 gap-4">
       {/* Left: prompt input */}
       <div className="card p-5 space-y-3">
+        <div>
+          <label className="label">Find creators in</label>
+          <div className="flex flex-wrap gap-2">
+            {LOCATIONS.map((l) => (
+              <button key={l.value} type="button"
+                onClick={() => toggle(locations, l.value, setLocations)}
+                className={
+                  "rounded-lg border px-3 py-1.5 text-sm font-medium transition " +
+                  (locations.includes(l.value)
+                    ? "border-brand-400 bg-brand-50 text-brand-700 ring-2 ring-brand-200"
+                    : "border-slate-200 text-ink-700 hover:bg-slate-50")
+                }>
+                {l.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="label">Platforms</label>
+          <div className="flex flex-wrap gap-2">
+            {PLATFORMS.map((p) => (
+              <button key={p.value} type="button"
+                onClick={() => toggle(platforms, p.value, setPlatforms)}
+                className={
+                  "rounded-lg border px-3 py-1.5 text-sm font-medium transition " +
+                  (platforms.includes(p.value)
+                    ? "border-brand-400 bg-brand-50 text-brand-700 ring-2 ring-brand-200"
+                    : "border-slate-200 text-ink-700 hover:bg-slate-50")
+                }>
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <label className="label">Discovery prompt</label>
         <textarea
-          className="input min-h-[160px]"
-          placeholder="Describe who you want, e.g.: Find creators who could promote my business — focus on [niches], in [location], [follower range], good engagement, avoid celebrities. (The AI already knows your business from Settings.)"
+          className="input min-h-[140px]"
+          placeholder="Describe who you want, e.g.: food and going-out creators, students, sports fans, 2k–60k followers, authentic local engagement, avoid celebrities. (The AI already knows O'Learys and the locations/platforms above.)"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
         />
@@ -82,31 +134,32 @@ export function DiscoveryWizard({ templates }: { templates: Template[] }) {
               <Field label="Product focus" name="product_focus" value={filters.product_focus} />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <ReadOnly label="Cities" value={filters.cities?.join(", ")} />
+              <ReadOnly label="Locations" value={(filters.regions?.length ? filters.regions : filters.cities)?.join(", ")} />
+              <ReadOnly label="Platforms" value={(filters.platforms ?? []).map((p) => p === "tiktok" ? "TikTok" : "Instagram").join(", ")} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <ReadOnly label="Languages" value={filters.languages?.join(", ")} />
+              <ReadOnly label="Followers" value={`${filters.follower_min}–${filters.follower_max}`} />
             </div>
             <ReadOnly label="Categories" value={filters.categories?.join(", ")} />
-            <div className="grid grid-cols-2 gap-3">
-              <ReadOnly label="Followers" value={`${filters.follower_min}–${filters.follower_max}`} />
-              <ReadOnly label="Exclude" value={(filters.exclude ?? filters.excluded_niches)?.join(", ")} />
-            </div>
+            <ReadOnly label="Exclude" value={(filters.exclude ?? filters.excluded_niches)?.join(", ")} />
             <ReadOnly label="Message angle" value={filters.message_angle} />
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label">Affiliate payout (AED)</label>
+                <label className="label">Payout per booking (EUR, optional)</label>
                 <input name="affiliate_payout" type="number" className="input"
                   value={payout} onChange={(e) => setPayout(Number(e.target.value))} />
               </div>
               <div>
                 <label className="label">Outreach goal</label>
-                <input name="outreach_goal" className="input" defaultValue="affiliate partnership" />
+                <input name="outreach_goal" className="input" defaultValue="creator partnership / hosted visit" />
               </div>
             </div>
 
             {/* hidden carriers */}
             <input type="hidden" name="search_prompt" value={prompt} />
-            <input type="hidden" name="city" value={filters.cities?.[0] ?? ""} />
+            <input type="hidden" name="city" value={(filters.regions?.[0] ?? filters.cities?.[0]) ?? ""} />
             <input type="hidden" name="target_category" value={filters.categories?.[0] ?? ""} />
             <input type="hidden" name="parsed_filters" value={JSON.stringify(filters)} />
 
@@ -142,7 +195,11 @@ function ReadOnly({ label, value }: { label: string; value?: string }) {
   );
 }
 
-function suggestName(f: DiscoveryFilters): string {
-  return [f.country, f.product_focus, f.categories?.[0] ?? "creators"]
+function suggestName(f: DiscoveryFilters, locations: string[], platforms: CreatorPlatform[]): string {
+  const loc = locations.length ? locations.join("/") : f.country;
+  const plat = platforms.length === 1
+    ? (platforms[0] === "tiktok" ? "TikTok" : "Instagram")
+    : "IG+TikTok";
+  return [loc, f.categories?.[0] ?? "creators", plat]
     .filter(Boolean).join(" · ") || "New campaign";
 }

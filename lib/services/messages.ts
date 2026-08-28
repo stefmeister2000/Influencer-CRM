@@ -118,7 +118,7 @@ export function sendQueue(teamId: string, states: string[] = TO_SEND_STATES) {
   const placeholders = states.map(() => "?").join(",");
   const rows = db.prepare(
     `select m.*,
-            i.id as inf_id, i.instagram_username, i.full_name, i.profile_picture_url,
+            i.id as inf_id, i.instagram_username, i.platform, i.full_name, i.profile_picture_url,
             i.country, i.city, i.whatsapp, i.email
      from messages m
      join influencers i on i.id = m.influencer_id
@@ -130,9 +130,9 @@ export function sendQueue(teamId: string, states: string[] = TO_SEND_STATES) {
   return rows.map((r) => ({
     ...mapMessage(r),
     influencer: {
-      id: r.inf_id, instagram_username: r.instagram_username, full_name: r.full_name,
-      profile_picture_url: r.profile_picture_url, country: r.country, city: r.city,
-      whatsapp: r.whatsapp, email: r.email,
+      id: r.inf_id, instagram_username: r.instagram_username, platform: r.platform,
+      full_name: r.full_name, profile_picture_url: r.profile_picture_url,
+      country: r.country, city: r.city, whatsapp: r.whatsapp, email: r.email,
     },
   }));
 }

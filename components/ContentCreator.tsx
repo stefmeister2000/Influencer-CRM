@@ -3,16 +3,15 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { generateScriptAction, translateScriptAction } from "@/app/actions/content";
-import { SCRIPT_CATEGORIES, SCRIPT_FORMATS, FOUNDER_ANGLES, type ScriptCategory, type ScriptFormat, type FounderAngle } from "@/lib/ai/scriptWriter";
+import { SCRIPT_FORMATS, type ScriptFormat } from "@/lib/ai/scriptWriter";
 
 export function ContentCreator() {
-  const [category, setCategory] = useState<ScriptCategory>("weight_loss");
+  const [topic, setTopic] = useState("");
   const [format, setFormat] = useState<ScriptFormat>("video");
-  const [founderAngle, setFounderAngle] = useState<FounderAngle>("course");
   const [brief, setBrief] = useState("");
   const [script, setScript] = useState("");
   const [scriptId, setScriptId] = useState<string | null>(null);
-  const [isArabic, setIsArabic] = useState(false);
+  const [isDutch, setIsDutch] = useState(false);
   const [meta, setMeta] = useState<{ usedWebSearch: boolean } | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,12 +21,14 @@ export function ContentCreator() {
   function run() {
     setError(null);
     setCopied(false);
-    setIsArabic(false);
+    setIsDutch(false);
+    if (!topic.trim()) {
+      setError("Add a topic or subject first.");
+      return;
+    }
     start(async () => {
       try {
-        const r = await generateScriptAction(
-          category, brief, format, category === "founder" ? founderAngle : undefined,
-        );
+        const r = await generateScriptAction(topic, brief, format);
         setScript(r.script);
         setScriptId(r.id);
         setMeta({ usedWebSearch: r.usedWebSearch });
@@ -46,7 +47,7 @@ export function ContentCreator() {
       try {
         const r = await translateScriptAction(scriptId);
         setScript(r.script);
-        setIsArabic(true);
+        setIsDutch(true);
         router.refresh();
       } catch (e: any) {
         setError(e?.message ?? "Failed to translate");
@@ -59,24 +60,16 @@ export function ContentCreator() {
       {/* Inputs */}
       <div className="card p-5 space-y-4">
         <div>
-          <label className="label">Category</label>
-          <div className="grid grid-cols-2 gap-2">
-            {SCRIPT_CATEGORIES.map((c) => (
-              <button
-                key={c.value}
-                type="button"
-                onClick={() => setCategory(c.value)}
-                className={
-                  "rounded-lg border px-3 py-2.5 text-sm font-medium text-left transition " +
-                  (category === c.value
-                    ? "border-brand-400 bg-brand-50 text-brand-700 ring-2 ring-brand-200"
-                    : "border-slate-200 text-ink-700 hover:bg-slate-50")
-                }
-              >
-                {c.label}
-              </button>
-            ))}
-          </div>
+          <label className="label">Topic / subject</label>
+          <input
+            className="input"
+            placeholder="e.g. morning routines, cold plunging, SaaS pricing, marathon training…"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+          />
+          <p className="text-xs text-ink-500 mt-1">
+            What is this piece about? The AI checks what's trending on it, then writes.
+          </p>
         </div>
 
         <div>
@@ -100,29 +93,6 @@ export function ContentCreator() {
           </div>
         </div>
 
-        {category === "founder" && (
-          <div>
-            <label className="label">Who is this targeting? (tone)</label>
-            <div className="grid grid-cols-1 gap-2">
-              {FOUNDER_ANGLES.map((a) => (
-                <button
-                  key={a.value}
-                  type="button"
-                  onClick={() => setFounderAngle(a.value)}
-                  className={
-                    "rounded-lg border px-3 py-2.5 text-sm font-medium text-left transition " +
-                    (founderAngle === a.value
-                      ? "border-brand-400 bg-brand-50 text-brand-700 ring-2 ring-brand-200"
-                      : "border-slate-200 text-ink-700 hover:bg-slate-50")
-                  }
-                >
-                  {a.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         <div>
           <label className="label">
             What do you want for this {format === "linkedin" ? "post" : "video"}?
@@ -130,9 +100,9 @@ export function ContentCreator() {
           <textarea
             className="input min-h-[150px]"
             placeholder={
-              category === "founder"
-                ? "e.g. A contrarian take on why most clinics will lose to telehealth in 2 years — tie it to our white-label software. Bold, founder voice, end with 'DM me TELEHEALTH'."
-                : "e.g. A myth-busting Reel about why crash diets fail, aimed at women 30-45 in Dubai. Confident, slightly contrarian. Mention it's doctor-reviewed and fully online."
+              format === "linkedin"
+                ? "e.g. A contrarian take, aimed at founders. Tell a short story, then 3 takeaways. End with a soft CTA to follow."
+                : "e.g. A myth-busting Reel aimed at beginners. Confident, slightly contrarian tone. End with 'follow for part 2'."
             }
             value={brief}
             onChange={(e) => setBrief(e.target.value)}
@@ -154,16 +124,16 @@ export function ContentCreator() {
           <h2 className="font-semibold">Script</h2>
           {script && (
             <div className="flex items-center gap-2 flex-wrap justify-end">
-              {isArabic ? (
-                <span className="badge bg-emerald-50 text-emerald-700">Arabic</span>
+              {isDutch ? (
+                <span className="badge bg-emerald-50 text-emerald-700">Dutch</span>
               ) : meta && (
                 <span className="badge bg-slate-100 text-slate-600">
                   {meta.usedWebSearch ? "trend-researched" : "from knowledge"}
                 </span>
               )}
-              {!isArabic && (
+              {!isDutch && (
                 <button className="btn-ghost py-1 text-xs" disabled={pending} onClick={translate}>
-                  {pending ? "Translating…" : "Translate to Arabic"}
+                  {pending ? "Translating…" : "Translate to Dutch"}
                 </button>
               )}
               <button
@@ -187,14 +157,13 @@ export function ContentCreator() {
           </div>
         ) : (
           <textarea
-            dir={isArabic ? "rtl" : "ltr"}
             className="input flex-1 min-h-[320px] font-mono text-[13px] leading-relaxed"
             value={script}
             onChange={(e) => setScript(e.target.value)}
           />
         )}
-        {isArabic && (
-          <p className="text-xs text-ink-500 mt-2">Arabic version saved to your scripts below.</p>
+        {isDutch && (
+          <p className="text-xs text-ink-500 mt-2">Dutch version saved to your scripts below.</p>
         )}
       </div>
     </div>

@@ -15,13 +15,14 @@ const NAV = [
   { href: "/settings", label: "Settings", icon: "⚙" },
 ];
 
-export function Sidebar() {
+export function Sidebar({ businessName }: { businessName: string }) {
   const path = usePathname();
+  const initial = businessName.trim().charAt(0).toUpperCase() || "•";
   return (
     <aside className="w-60 shrink-0 border-r border-slate-200 bg-white h-screen sticky top-0 hidden md:flex flex-col">
       <div className="px-5 py-4 flex items-center gap-2 border-b border-slate-100">
-        <div className="w-8 h-8 rounded-lg bg-brand-600 text-white grid place-items-center font-bold">O</div>
-        <div className="font-semibold text-ink-900">ORVION CRM</div>
+        <div className="w-8 h-8 rounded-lg bg-brand-600 text-white grid place-items-center font-bold">{initial}</div>
+        <div className="font-semibold text-ink-900 truncate">{businessName}</div>
       </div>
       <nav className="p-2 flex-1 overflow-y-auto">
         {NAV.map((item) => {

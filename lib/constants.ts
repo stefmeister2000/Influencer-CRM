@@ -28,7 +28,7 @@ export const MESSAGE_KINDS: { value: MessageKind; label: string }[] = [
   { value: "premium", label: "Premium" },
   { value: "direct", label: "Direct" },
   { value: "less_salesy", label: "Less salesy" },
-  { value: "arabic", label: "Arabic" },
+  { value: "dutch", label: "Dutch" },
   { value: "english", label: "English" },
   { value: "short_dm", label: "Short DM" },
   { value: "long_email", label: "Long email" },
@@ -69,15 +69,15 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   viewer: "Viewer",
 };
 
-export const DEFAULT_AFFILIATE_PAYOUT = 200; // AED per confirmed patient
+export const DEFAULT_AFFILIATE_PAYOUT = 0; // EUR per confirmed booking (set per campaign)
 export const PAGE_SIZE = 25;
 
-/** ORVION brand voice — injected into all AI message prompts. */
-export const ORVION_BRAND_VOICE = `
-ORVION is a premium, fully online, doctor-reviewed health platform in the UAE
-focused on hair loss, men's health, weight loss, and wellness.
-Voice: premium, simple, direct, human, trustworthy, discreet, modern, UAE-focused.
-Never: emojis, overhype, fake compliments, medical promises/guarantees/"cure"
-language, aggressive sales pressure, long paragraphs, medication names in cold
-outreach, or before/after claims.
+/**
+ * Fallback brand voice, only used if a team has no business profile set.
+ * The real voice comes from Settings → Business profile (getBusinessContext).
+ */
+export const DEFAULT_BRAND_VOICE = `
+Write like a real person on behalf of the business: warm, concise, specific and
+human. No emojis, no hype, no fake compliments, no pressure, no long paragraphs.
+Make only claims supported by the business context.
 `.trim();

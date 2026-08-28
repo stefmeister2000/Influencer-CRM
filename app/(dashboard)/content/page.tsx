@@ -15,7 +15,7 @@ export default function ContentPage() {
     <div>
       <PageHeader
         title="Organic Content Creator"
-        subtitle="Pick a category, describe the video, and get a viral-grade Reels/TikTok script with a strong hook."
+        subtitle="Add a topic, describe the video, and get a viral-grade Reels/TikTok or LinkedIn script with a strong hook."
       />
       <KnowledgePanel initial={knowledge} />
       <ContentCreator />

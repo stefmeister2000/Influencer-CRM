@@ -28,6 +28,7 @@ export function listInfluencers(
     if (g) { where.push(`status in (${g.map(() => "?").join(",")})`); args.push(...g); }
   }
 
+  if (f.platform) { where.push("platform = ?"); args.push(f.platform); }
   if (f.country) { where.push("country = ?"); args.push(f.country); }
   if (f.city) { where.push("city = ?"); args.push(f.city); }
   if (f.category) { where.push("category like ?"); args.push(`%${f.category}%`); }
@@ -102,6 +103,7 @@ export function upsertInfluencer(
     team_id: ctx.teamId,
     campaign_id: opts.campaignId ?? null,
     instagram_username: profile.instagram_username,
+    platform: profile.platform ?? "instagram",
     profile_url: profile.profile_url ?? null,
     full_name: profile.full_name ?? null,
     bio: profile.bio ?? null,

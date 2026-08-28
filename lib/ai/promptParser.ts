@@ -10,7 +10,9 @@ Return JSON with EXACTLY these keys:
 {
   "country": string,
   "cities": string[],
-  "categories": string[],          // creator niches, e.g. barber, fitness, lifestyle, beauty
+  "regions": string[],             // friendly target locations, e.g. ["Ghent","Netherlands"]
+  "platforms": string[],           // subset of ["instagram","tiktok"]
+  "categories": string[],          // creator niches, e.g. food, nightlife, student, sports
   "product_focus": string,         // the business's product/service this targets
   "follower_min": number,
   "follower_max": number,
@@ -34,14 +36,23 @@ named individuals. Keep arrays concise.`;
 const FALLBACK: DiscoveryFilters = {
   country: "",
   cities: [],
+  regions: [],
+  platforms: ["instagram", "tiktok"],
   categories: ["lifestyle"],
   product_focus: "",
-  follower_min: 5000,
+  follower_min: 3000,
   follower_max: 100000,
-  languages: ["English"],
+  languages: ["Dutch", "English"],
   gender_focus: "any",
   exclude: ["celebrities", "fake engagement", "explicit content"],
   message_angle: "a strong partnership fit",
+};
+
+const PLATFORMS = ["instagram", "tiktok"] as const;
+const cleanPlatforms = (v: unknown): ("instagram" | "tiktok")[] => {
+  const arr = Array.isArray(v) ? v.map((x) => String(x).toLowerCase()) : [];
+  const picked = PLATFORMS.filter((p) => arr.some((x) => x.includes(p.slice(0, 4))));
+  return picked.length ? picked : ["instagram", "tiktok"];
 };
 
 /** Parse a discovery prompt into structured filters, tailored to the business. */
@@ -59,5 +70,7 @@ export async function parsePrompt(prompt: string, businessContext?: string): Pro
     follower_min: Number(parsed.follower_min) || FALLBACK.follower_min,
     follower_max: Number(parsed.follower_max) || FALLBACK.follower_max,
     categories: parsed.categories?.length ? parsed.categories : FALLBACK.categories,
+    regions: Array.isArray(parsed.regions) ? parsed.regions : [],
+    platforms: cleanPlatforms(parsed.platforms),
   };
 }

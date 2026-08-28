@@ -50,7 +50,8 @@ export function ruleBasedScore(
     if (filters.gender_focus && filters.gender_focus !== "any" &&
         eq(inf.gender_focus, filters.gender_focus)) fit += 5;
   } else {
-    if (eq(inf.country, "UAE") || eq(inf.country, "United Arab Emirates")) fit += 20;
+    if (/belgium|belgi[eë]|netherlands|nederland/i.test(inf.country ?? "")) fit += 20;
+    if (/ghent|gent|hasselt/i.test(inf.city ?? "")) fit += 8;
   }
   fit = clamp(fit);
 

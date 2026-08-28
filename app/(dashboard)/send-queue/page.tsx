@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/auth";
 import { sendQueue, SENT_STATES } from "@/lib/services/messages";
+import { getBusinessProfile } from "@/lib/services/business";
 import { PageHeader, EmptyState } from "@/components/ui";
 import { OutreachCard } from "@/components/OutreachCard";
 
@@ -10,6 +11,7 @@ export default function SendQueuePage({
   searchParams: { tab?: string };
 }) {
   const ctx = requireSession();
+  const businessName = getBusinessProfile(ctx.teamId).name?.trim() || "";
   const tab = searchParams.tab === "sent" ? "sent" : "to_send";
   const items = tab === "sent"
     ? sendQueue(ctx.teamId, SENT_STATES)
@@ -53,7 +55,7 @@ export default function SendQueuePage({
       ) : (
         <div className="space-y-3">
           {items.map((m: any) => (
-            <OutreachCard key={m.id} item={m} role={ctx.role} />
+            <OutreachCard key={m.id} item={m} role={ctx.role} businessName={businessName} />
           ))}
         </div>
       )}

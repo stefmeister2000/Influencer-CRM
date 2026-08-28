@@ -30,8 +30,12 @@ export function InfluencerFilters({
         defaultValue={current.q}
         onKeyDown={(e) => { if (e.key === "Enter") apply({ q: (e.target as HTMLInputElement).value }); }} />
 
-      <input className="input" placeholder="Product fit" defaultValue={current.product_focus}
-        onKeyDown={(e) => { if (e.key === "Enter") apply({ product_focus: (e.target as HTMLInputElement).value }); }} />
+      <select className="input" defaultValue={current.platform ?? ""}
+        onChange={(e) => apply({ platform: e.target.value })}>
+        <option value="">Any platform</option>
+        <option value="instagram">Instagram</option>
+        <option value="tiktok">TikTok</option>
+      </select>
 
       <select className="input" defaultValue={current.status ?? ""}
         onChange={(e) => apply({ status: e.target.value })}>

@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { generateScript, translateToArabic, type ScriptCategory, type ScriptFormat, type FounderAngle } from "@/lib/ai/scriptWriter";
+import { generateScript, translateToDutch, type ScriptFormat } from "@/lib/ai/scriptWriter";
 import {
   saveScript, getScript, setScriptStatus, updateScriptBody, deleteScript,
-  recentScriptsForCategory, type ScriptStatus,
+  recentScripts, type ScriptStatus,
 } from "@/lib/services/scripts";
 import { getSetting, setSetting, CONTENT_KNOWLEDGE_KEY } from "@/lib/services/settings";
 
@@ -14,27 +14,26 @@ function knowledge(teamId: string): string {
   return getSetting<{ text: string }>(teamId, CONTENT_KNOWLEDGE_KEY)?.text ?? "";
 }
 
-/** Generate a script (aware of brand knowledge + past scripts) and save as draft. */
+/** Generate a script (aware of saved context + past scripts) and save as draft. */
 export async function generateScriptAction(
-  category: ScriptCategory, brief: string, format: ScriptFormat = "video",
-  founderAngle?: FounderAngle,
+  topic: string, brief: string, format: ScriptFormat = "video",
 ): Promise<{ id: string; script: string; usedWebSearch: boolean }> {
   const ctx = requireSession();
   if (!can.write(ctx.role)) throw new Error("Not allowed");
 
-  const past = recentScriptsForCategory(ctx.teamId, category, 8).map((s) => s.body);
+  const past = recentScripts(ctx.teamId, 8).map((s) => s.body);
   const result = await generateScript({
-    category, brief, format, founderAngle, knowledge: knowledge(ctx.teamId), avoid: past,
+    topic, brief, format, knowledge: knowledge(ctx.teamId), avoid: past,
   });
   const saved = saveScript(ctx, {
-    category, brief, body: result.script, usedWebSearch: result.usedWebSearch,
+    topic, brief, body: result.script, usedWebSearch: result.usedWebSearch,
     language: "en", format,
   });
   revalidatePath("/content");
   return { id: saved.id, script: result.script, usedWebSearch: result.usedWebSearch };
 }
 
-/** Transcreate an existing script to Arabic and save it as a new (ar) script. */
+/** Transcreate an existing script to Dutch and save it as a new (nl) script. */
 export async function translateScriptAction(
   id: string,
 ): Promise<{ id: string; script: string }> {
@@ -42,13 +41,13 @@ export async function translateScriptAction(
   if (!can.write(ctx.role)) throw new Error("Not allowed");
   const src = getScript(ctx.teamId, id);
   if (!src) throw new Error("Script not found");
-  const arabic = await translateToArabic(src.body, knowledge(ctx.teamId));
+  const dutch = await translateToDutch(src.body, knowledge(ctx.teamId));
   const saved = saveScript(ctx, {
-    category: src.category, brief: `Arabic version of a ${src.category} script`,
-    body: arabic, usedWebSearch: false, language: "ar", format: src.format ?? "video",
+    topic: src.topic, brief: `Dutch version${src.topic ? ` of: ${src.topic}` : ""}`,
+    body: dutch, usedWebSearch: false, language: "nl", format: src.format ?? "video",
   });
   revalidatePath("/content");
-  return { id: saved.id, script: arabic };
+  return { id: saved.id, script: dutch };
 }
 
 export async function saveKnowledgeAction(text: string) {

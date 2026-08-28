@@ -25,7 +25,7 @@ export default function CampaignDetail({ params }: { params: { id: string } }) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <StatCard label="Status" value={titleCase(campaign.status)} />
         <StatCard label="Influencers" value={count} />
-        <StatCard label="Payout" value={campaign.affiliate_payout ? `AED ${campaign.affiliate_payout}` : "—"} />
+        <StatCard label="Payout" value={campaign.affiliate_payout ? `€${campaign.affiliate_payout}` : "—"} />
         <StatCard label="Goal" value={campaign.outreach_goal ?? "—"} />
       </div>
 

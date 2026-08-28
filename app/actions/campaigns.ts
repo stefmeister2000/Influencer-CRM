@@ -7,12 +7,28 @@ import { can } from "@/lib/permissions";
 import { createCampaign, updateCampaign, getCampaign, deleteCampaign } from "@/lib/services/campaigns";
 import { runDiscovery } from "@/lib/services/discovery";
 import { parsePrompt } from "@/lib/ai/promptParser";
-import type { DiscoveryFilters } from "@/lib/types";
+import type { CreatorPlatform, DiscoveryFilters } from "@/lib/types";
 
-export async function parsePromptAction(prompt: string): Promise<DiscoveryFilters> {
+export async function parsePromptAction(
+  prompt: string,
+  opts?: { regions?: string[]; platforms?: CreatorPlatform[] },
+): Promise<DiscoveryFilters> {
   const ctx = requireSession();
   const { getBusinessContext } = await import("@/lib/services/business");
-  return parsePrompt(prompt, getBusinessContext(ctx.teamId));
+
+  const regions = (opts?.regions ?? []).filter(Boolean);
+  const platforms = (opts?.platforms ?? []).filter(Boolean);
+  const hints = [
+    regions.length ? `Target locations: ${regions.join(", ")}.` : "",
+    platforms.length ? `Platforms: ${platforms.join(", ")}.` : "",
+  ].filter(Boolean).join(" ");
+  const fullPrompt = hints ? `${prompt}\n\n${hints}` : prompt;
+
+  const filters = await parsePrompt(fullPrompt, getBusinessContext(ctx.teamId));
+  // The wizard's explicit picks win over whatever the model inferred.
+  if (regions.length) filters.regions = regions;
+  if (platforms.length) filters.platforms = platforms;
+  return filters;
 }
 
 export async function createCampaignAction(formData: FormData) {

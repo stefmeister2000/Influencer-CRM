@@ -26,21 +26,26 @@ export class AiDiscoveryProvider implements ProfileProvider {
     if (!aiConfigured()) return [];
     const want = Math.min(limit, 40);
 
+    const platforms = (filters.platforms?.length ? filters.platforms : ["instagram", "tiktok"])
+      .map((p) => (p === "tiktok" ? "TikTok" : "Instagram"));
+    const platformList = platforms.join(" and ");
+
     const researchSystem = `You are an influencer researcher for a business
-(described below). Find REAL Instagram creators who would be a good fit for this
-business's outreach and the brief.
+(described below). Find REAL ${platformList} creators who would be a good fit for
+this business's outreach and the brief.
 
 ${businessContext ? `--- BUSINESS CONTEXT ---\n${businessContext}\n\n` : ""}Use the web search tool aggressively to find REAL, currently-active, PUBLIC
-Instagram creators that match the brief. Run SEVERAL searches — go niche by niche
-and place by place (e.g. "<city> <niche> instagram", "top <market> <niche>
-influencers", creator/agency lists, blog roundups). Only include people/pages you
-are reasonably confident genuinely exist and are public — never invent usernames.
-Prefer authentic micro/mid creators in the requested follower range, in the
-business's target market, and respect exclusions.
+creators on ${platformList} that match the brief. Run SEVERAL searches — go niche
+by niche, place by place, AND platform by platform (e.g. "<city> <niche>
+instagram", "<city> <niche> tiktok", "top <region> <niche> tiktokers",
+creator/agency lists, blog roundups, "beste <niche> influencers <land>"). Only
+include people/pages you are reasonably confident genuinely exist and are public —
+never invent usernames. Prefer authentic micro/mid creators in the requested
+follower range, in the target locations, and respect exclusions.
 
 Be thorough — list as MANY qualifying real creators as you can find (aim for
-${want}+). For each: @handle, name, city, niche, rough follower estimate, language,
-and a short reason they fit.`;
+${want}+). For EACH: platform (instagram or tiktok), @handle, name, city, niche,
+rough follower estimate, language, and a short reason they fit.`;
 
     const runResearch = async (extra: string): Promise<string> => {
       try {
@@ -62,7 +67,7 @@ and a short reason they fit.`;
     const research2 = await runResearch(
       "\n\nThis is a SECOND pass — find as many ADDITIONAL different real creators " +
       "as possible that a first pass would likely miss (smaller accounts, other " +
-      "cities, Arabic-first creators, adjacent niches). Avoid repeating obvious big names.",
+      "cities, the other platform, adjacent niches). Avoid repeating obvious big names.",
     );
     const research = [research1, research2].filter(Boolean).join("\n\n---\n\n");
     if (!research || !/@?\w/.test(research)) return [];
@@ -72,11 +77,12 @@ and a short reason they fit.`;
     try {
       parsed = await askJSON<{ creators: any[] }>({
         system:
-          `Extract ALL the Instagram creators mentioned in the research into JSON. ` +
-          `De-duplicate by handle. Only include creators with a real-looking @handle ` +
+          `Extract ALL the creators mentioned in the research into JSON. ` +
+          `De-duplicate by platform+handle. Only include creators with a real-looking @handle ` +
           `that actually appears in the text. Return an object: {"creators":[{` +
-          `"instagram_username","full_name","city","category","estimated_followers",` +
-          `"language","why"}]}. estimated_followers is a number (convert "25k" to 25000). ` +
+          `"platform","instagram_username","full_name","city","category","estimated_followers",` +
+          `"language","why"}]}. "platform" is "instagram" or "tiktok" (infer from the source/URL). ` +
+          `estimated_followers is a number (convert "25k" to 25000). ` +
           `Omit anyone without a handle. Include as many as are present.`,
         user: research,
         maxTokens: 8000,
@@ -90,8 +96,9 @@ and a short reason they fit.`;
     return items
       .filter((it) => it && typeof it.instagram_username === "string")
       .filter((it) => {
-        const u = String(it.instagram_username).replace(/^@/, "").toLowerCase().trim();
-        if (!u || seen.has(u)) return false;
+        const plat = /tik/i.test(String(it.platform ?? "")) ? "tiktok" : "instagram";
+        const u = plat + ":" + String(it.instagram_username).replace(/^@/, "").toLowerCase().trim();
+        if (u.endsWith(":") || seen.has(u)) return false;
         seen.add(u);
         return true;
       })
@@ -99,9 +106,10 @@ and a short reason they fit.`;
       .map((it) =>
         normalizeProfileData({
           instagram_username: String(it.instagram_username).replace(/^@/, "").trim(),
+          platform: /tik/i.test(String(it.platform ?? "")) ? "tiktok" : "instagram",
           full_name: it.full_name ?? null,
           city: it.city ?? null,
-          country: filters.country ?? "UAE",
+          country: filters.country || null,
           category: it.category ?? null,
           language: it.language ?? null,
           follower_count: this.toNum(it.estimated_followers),
@@ -124,10 +132,14 @@ and a short reason they fit.`;
   }
 
   private briefFromFilters(f: DiscoveryFilters, want: number): string {
+    const platforms = (f.platforms?.length ? f.platforms : ["instagram", "tiktok"])
+      .map((p) => (p === "tiktok" ? "TikTok" : "Instagram")).join(" and ");
+    const locations = f.regions?.length
+      ? f.regions.join(", ")
+      : [f.country, ...(f.cities ?? [])].filter(Boolean).join(", ");
     return [
-      `Find up to ${want} real public Instagram creators.`,
-      `Country: ${f.country || "UAE"}`,
-      f.cities?.length ? `Cities: ${f.cities.join(", ")}` : "",
+      `Find up to ${want} real public creators on ${platforms}.`,
+      locations ? `Target locations: ${locations}` : "",
       f.categories?.length ? `Niches/categories: ${f.categories.join(", ")}` : "",
       `Follower range: ${f.follower_min ?? 1000}–${f.follower_max ?? 100000}`,
       f.languages?.length ? `Languages: ${f.languages.join(", ")}` : "",
@@ -136,7 +148,7 @@ and a short reason they fit.`;
         ? `Exclude: ${(f.exclude ?? f.excluded_niches)!.join(", ")}`
         : "",
       f.message_angle ? `Outreach angle: ${f.message_angle}` : "",
-      `\nList up to ${want} creators.`,
+      `\nList up to ${want} creators, each tagged with its platform.`,
     ].filter(Boolean).join("\n");
   }
 

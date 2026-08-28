@@ -43,7 +43,7 @@ export default function CampaignsPage() {
                   </td>
                   <td className="px-4 py-3">{titleCase(c.product_focus ?? "")}</td>
                   <td className="px-4 py-3">{[c.city, c.country].filter(Boolean).join(", ") || "—"}</td>
-                  <td className="px-4 py-3">{c.affiliate_payout ? `AED ${c.affiliate_payout}` : "—"}</td>
+                  <td className="px-4 py-3">{c.affiliate_payout ? `€${c.affiliate_payout}` : "—"}</td>
                   <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
                   <td className="px-4 py-3 text-ink-500">{formatDate(c.created_at)}</td>
                   <td className="px-4 py-3 text-right">

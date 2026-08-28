@@ -25,7 +25,7 @@ const KIND_GUIDANCE: Record<MessageKind, string> = {
   premium: "Polished, premium, selective-feeling tone.",
   direct: "Short and to the point. Lead with the offer.",
   less_salesy: "Soft, no pitch energy. Curiosity over selling.",
-  arabic: "Write the entire message in natural Arabic (Gulf-friendly MSA).",
+  dutch: "Write the entire message in natural, friendly Dutch (Flemish-friendly).",
   english: "Write in clean, simple English.",
   short_dm: "Max 3 short sentences. Instagram DM length.",
   long_email: "Email format with a one-line subject (prefix 'Subject:') then body.",
@@ -59,7 +59,7 @@ export interface GeneratedMessage {
 export async function generateMessage(opts: GenerateOpts): Promise<GeneratedMessage> {
   const { influencer, kind } = opts;
   const language =
-    opts.language || (kind === "arabic" ? "Arabic" : influencer.language || "English");
+    opts.language || (kind === "dutch" ? "Dutch" : influencer.language || "English");
   const name =
     influencer.full_name?.split(" ")[0] || influencer.instagram_username || "there";
 

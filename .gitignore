@@ -9,3 +9,9 @@ out
 .vercel
 next-env.d.ts
 data
+
+# TS incremental build cache
+tsconfig.tsbuildinfo
+
+# local dev launch config (machine-specific paths)
+.claude/launch.json

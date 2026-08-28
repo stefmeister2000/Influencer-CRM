@@ -39,12 +39,19 @@ function ManualForm({ campaigns, onDone }: { campaigns: Campaign[]; onDone: () =
     <form action={async (fd) => { await addInfluencerAction(fd); onDone(); }} className="space-y-3">
       <h2 className="font-semibold text-lg">Add influencer</h2>
       <div className="grid grid-cols-2 gap-3">
-        <Input name="instagram_username" label="Instagram username *" required />
+        <Input name="instagram_username" label="Username / handle *" required />
+        <div>
+          <label className="label">Platform</label>
+          <select name="platform" className="input" defaultValue="instagram">
+            <option value="instagram">Instagram</option>
+            <option value="tiktok">TikTok</option>
+          </select>
+        </div>
         <Input name="full_name" label="Full name" />
         <Input name="profile_url" label="Profile URL" />
         <Input name="follower_count" label="Followers" type="number" />
-        <Input name="country" label="Country" defaultValue="UAE" />
-        <Input name="city" label="City" />
+        <Input name="country" label="Country" defaultValue="Belgium" />
+        <Input name="city" label="City" defaultValue="Ghent" />
         <Input name="category" label="Category" />
         <Input name="email" label="Email" />
         <Input name="whatsapp" label="WhatsApp" />
@@ -89,8 +96,9 @@ function CsvForm({ campaigns, onDone }: { campaigns: Campaign[]; onDone: () => v
     <form action={handle} className="space-y-3">
       <h2 className="font-semibold text-lg">Import CSV</h2>
       <p className="text-xs text-ink-500">
-        Columns: username, profile_url, full_name, bio, follower_count, following_count,
-        post_count, engagement_rate, country, city, email, whatsapp, category, notes
+        Columns: username, platform (instagram/tiktok), profile_url, full_name, bio,
+        follower_count, following_count, post_count, engagement_rate, country, city,
+        email, whatsapp, category, notes
       </p>
       <input name="file" type="file" accept=".csv" required className="input" />
       <div className="grid grid-cols-2 gap-3">

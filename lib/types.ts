@@ -17,7 +17,7 @@ export type AffiliateStatus =
   | "not_affiliate" | "invited" | "signed_up" | "active" | "inactive";
 
 export type MessageKind =
-  | "friendly" | "premium" | "direct" | "less_salesy" | "arabic" | "english"
+  | "friendly" | "premium" | "direct" | "less_salesy" | "dutch" | "english"
   | "short_dm" | "long_email" | "whatsapp" | "follow_up_1" | "follow_up_2"
   | "thank_you" | "rejection_reply" | "negotiation_reply";
 
@@ -26,6 +26,8 @@ export type MessageState =
   | "sent" | "replied" | "follow_up_needed";
 
 export type SourceKind = "manual" | "csv" | "instagram_graph" | "provider";
+
+export type CreatorPlatform = "instagram" | "tiktok";
 
 export type ProductFocus =
   | "hair_loss" | "mens_health" | "weight_loss" | "wellness" | string;
@@ -54,7 +56,9 @@ export interface Influencer {
   id: string;
   team_id: string;
   campaign_id: string | null;
+  /** The creator's handle (without @). Named for legacy reasons; see `platform`. */
   instagram_username: string;
+  platform: CreatorPlatform;
   profile_url: string | null;
   full_name: string | null;
   bio: string | null;
@@ -118,6 +122,10 @@ export interface Message {
 export interface DiscoveryFilters {
   country: string;
   cities: string[];
+  /** Friendly target locations chosen in the wizard, e.g. "Ghent", "Netherlands". */
+  regions?: string[];
+  /** Which platforms to search, e.g. ["instagram","tiktok"]. */
+  platforms?: CreatorPlatform[];
   categories: string[];
   product_focus: ProductFocus;
   follower_min: number;
@@ -156,6 +164,7 @@ export interface ScoringResult {
 export interface FilterParams {
   q?: string;
   view?: "review" | "approved" | "rejected" | "all";
+  platform?: string;
   country?: string;
   city?: string;
   category?: string;
