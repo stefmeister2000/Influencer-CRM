@@ -20,6 +20,19 @@ interface DB {
   close(): void;
 }
 
+/**
+ * node:sqlite builds every row (and .run() result) with Object.create(null) —
+ * a null-prototype object. React Server Components' flight serializer rejects
+ * those when a Server Component passes one to a Client Component
+ * ("Only plain objects... Classes or null prototypes are not supported"),
+ * which crashed any page handing a raw db row to a "use client" component
+ * (e.g. Settings -> RoleManager). Normalize once here so every caller gets a
+ * plain object for free.
+ */
+function toPlain<T>(row: T): T {
+  return row && typeof row === "object" ? ({ ...row } as T) : row;
+}
+
 // --- Schema (SQLite). Enums modeled as TEXT; jsonb as TEXT; bools as 0/1. ---
 const SCHEMA = `
 create table if not exists teams (
@@ -233,11 +246,27 @@ function open(): DB {
   }
 
   const raw = new DatabaseSync(file);
-  const db = raw as unknown as DB;
+  const rawDb = raw as unknown as DB;
+
+  // Wrap every prepared statement so all()/get()/run() hand back plain objects
+  // instead of node:sqlite's null-prototype ones (see toPlain() above).
+  const db: DB = {
+    prepare(sql: string): Stmt {
+      const stmt = rawDb.prepare(sql);
+      return {
+        all: (...params: any[]) => stmt.all(...params).map(toPlain),
+        get: (...params: any[]) => toPlain(stmt.get(...params)),
+        run: (...params: any[]) => toPlain(stmt.run(...params)),
+      };
+    },
+    exec: (sql: string) => rawDb.exec(sql),
+    close: () => rawDb.close(),
+  };
+
   // node:sqlite defaults busy_timeout to 0 (fail immediately on a locked db).
   // `next build` opens the file from several worker processes at once, so give
   // writers time to wait it out.
-  db.exec("PRAGMA busy_timeout = 8000");
+  db.exec("PRAGMA busy_timeout = 20000");
   db.exec("PRAGMA journal_mode = WAL");
   db.exec("PRAGMA foreign_keys = ON");
 
@@ -245,16 +274,35 @@ function open(): DB {
   // several processes at once. BEGIN IMMEDIATE takes the write lock up front, so
   // a second process's schema/migration pass blocks (via busy_timeout) until the
   // first one commits, instead of racing the "does this column exist yet" check.
-  db.exec("BEGIN IMMEDIATE");
+  // Even with busy_timeout, heavy build-time contention can still surface a
+  // "database is locked" — retry the whole pass a few times with backoff.
+  initSchema(db);
+  return db;
+}
+
+function initSchema(db: DB, attempt = 0): void {
   try {
-    db.exec(SCHEMA);
-    runMigrations(db);
-    db.exec("COMMIT");
-  } catch (err) {
-    db.exec("ROLLBACK");
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      db.exec(SCHEMA);
+      runMigrations(db);
+      db.exec("COMMIT");
+    } catch (err) {
+      db.exec("ROLLBACK");
+      throw err;
+    }
+  } catch (err: any) {
+    if (attempt < 5 && /database is locked|SQLITE_BUSY/i.test(String(err?.message))) {
+      sleepSync(150 * (attempt + 1));
+      return initSchema(db, attempt + 1);
+    }
     throw err;
   }
-  return db;
+}
+
+/** Synchronous sleep — module init can't be async, and this only runs a handful of times. */
+function sleepSync(ms: number) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
 /** Lightweight additive migrations for existing databases. */
