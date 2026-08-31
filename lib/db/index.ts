@@ -240,8 +240,20 @@ function open(): DB {
   db.exec("PRAGMA busy_timeout = 8000");
   db.exec("PRAGMA journal_mode = WAL");
   db.exec("PRAGMA foreign_keys = ON");
-  db.exec(SCHEMA);
-  runMigrations(db);
+
+  // `next build` (and multiple server instances) can open this same file from
+  // several processes at once. BEGIN IMMEDIATE takes the write lock up front, so
+  // a second process's schema/migration pass blocks (via busy_timeout) until the
+  // first one commits, instead of racing the "does this column exist yet" check.
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.exec(SCHEMA);
+    runMigrations(db);
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
+  }
   return db;
 }
 
@@ -255,8 +267,12 @@ function runMigrations(db: DB) {
 
 function ensureColumn(db: DB, table: string, column: string, ddl: string) {
   const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
-  if (!cols.some((c) => c.name === column)) {
+  if (cols.some((c) => c.name === column)) return;
+  try {
     db.exec(`alter table ${table} add column ${column} ${ddl}`);
+  } catch (err: any) {
+    // Belt-and-suspenders: another process won this race despite the transaction above.
+    if (!/duplicate column name/i.test(String(err?.message))) throw err;
   }
 }
 
