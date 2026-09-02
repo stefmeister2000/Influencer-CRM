@@ -22,12 +22,17 @@ export function replacePromptLibrary(
      (id, team_id, name, prompt, default_product, default_message_angle, created_by, created_at, updated_at)
      values (?,?,?,?,?,?,?,?,?)`,
   );
+  // Belt-and-suspenders: "product" renders as a short label in the UI —
+  // clamp it here too, regardless of what generated the seed.
+  const clamp = (v: string | undefined, max: number) =>
+    v && v.length > max ? v.slice(0, max - 1).trim() + "…" : v || null;
+
   tx(() => {
     del.run(nowIso(), ctx.teamId);
     for (const s of seeds) {
       ins.run(
-        uid(), ctx.teamId, s.name, s.prompt,
-        s.product || null, s.angle || null,
+        uid(), ctx.teamId, s.name.slice(0, 80), s.prompt.slice(0, 800),
+        clamp(s.product, 60), clamp(s.angle, 160),
         ctx.userId, nowIso(), nowIso(),
       );
     }

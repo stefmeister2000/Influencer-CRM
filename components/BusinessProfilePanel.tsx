@@ -1,23 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { saveBusinessProfileAction } from "@/app/actions/business";
 import type { BusinessProfile } from "@/lib/services/business";
 
 export function BusinessProfilePanel({ initial }: { initial: BusinessProfile }) {
-  const [saved, setSaved] = useState(false);
+  const [status, setStatus] = useState<"idle" | "saved" | "refreshed">("idle");
+  const [pending, start] = useTransition();
+  const router = useRouter();
 
   return (
     <div className="card p-5">
       <div className="mb-3">
         <h2 className="font-semibold text-ink-900">Business profile</h2>
         <p className="text-sm text-ink-500">
-          This is the business you're doing outreach for. The AI uses it to find the right creators,
-          score fit, and write messages. Fill it in once — it drives everything.
+          This is the business you're doing outreach for. Saving it has Claude screen the brand and
+          build a discovery prompt library targeting the same niche — it drives finding creators,
+          scoring fit, and writing messages.
         </p>
       </div>
 
-      <form action={async (fd) => { await saveBusinessProfileAction(fd); setSaved(true); }} className="space-y-3">
+      <form
+        action={(fd) => start(async () => {
+          const r = await saveBusinessProfileAction(fd);
+          setStatus(r.promptsRefreshed ? "refreshed" : "saved");
+          router.refresh();
+        })}
+        className="space-y-3">
         <div className="grid md:grid-cols-2 gap-3">
           <Field name="name" label="Business name *" value={initial.name} placeholder="e.g. Acme Skincare" required />
           <Field name="website" label="Website" value={initial.website} placeholder="https://…" />
@@ -35,8 +45,17 @@ export function BusinessProfilePanel({ initial }: { initial: BusinessProfile }) 
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="btn-primary" onClick={() => setSaved(false)}>Save business profile</button>
-          {saved && <span className="text-sm text-emerald-700">Saved ✓ — discovery, scoring and messages now target this business.</span>}
+          <button className="btn-primary" disabled={pending} onClick={() => setStatus("idle")}>
+            {pending ? "Saving & screening with Claude…" : "Save business profile"}
+          </button>
+          {status === "refreshed" && (
+            <span className="text-sm text-emerald-700">
+              Saved ✓ — discovery, scoring and messages target this business, and the prompt library was rebuilt for its niche.
+            </span>
+          )}
+          {status === "saved" && (
+            <span className="text-sm text-emerald-700">Saved ✓ — discovery, scoring and messages now target this business.</span>
+          )}
         </div>
       </form>
     </div>

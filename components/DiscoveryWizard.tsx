@@ -195,9 +195,9 @@ function Field({ label, name, value }: { label: string; name: string; value: str
 }
 function ReadOnly({ label, value }: { label: string; value?: string }) {
   return (
-    <div>
+    <div className="min-w-0">
       <label className="label">{label}</label>
-      <div className="text-sm text-ink-700 bg-slate-50 rounded-lg px-3 py-2 min-h-[38px]">
+      <div className="text-sm text-ink-700 bg-slate-50 rounded-lg px-3 py-2 min-h-[38px] break-words">
         {value || "—"}
       </div>
     </div>

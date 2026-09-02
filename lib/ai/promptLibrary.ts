@@ -49,7 +49,7 @@ export async function generatePromptLibrary(
       .map((t) => ({
         name: String(t.name).trim().slice(0, 60),
         prompt: String(t.prompt).trim().slice(0, 600),
-        product: String(t.product ?? "").trim().slice(0, 90),
+        product: shortPhrase(String(t.product ?? "")),
         angle: String(t.angle ?? "").trim().slice(0, 140),
       }));
     return items.length ? items : fallbackLibrary(business);
@@ -58,12 +58,28 @@ export async function generatePromptLibrary(
   }
 }
 
+/**
+ * "product" is shown as a short badge/tag in the UI, but source fields (the
+ * offer, a description) are full sentences — take the first clause/phrase
+ * instead of hard-cutting mid-sentence.
+ */
+function shortPhrase(s: string, max = 48): string {
+  const clean = s.trim().replace(/\s+/g, " ");
+  if (!clean) return "";
+  const firstClause = clean.split(/[.!?]|(?:,\s)|(?:\s—\s)|(?:\s-\s)/)[0].trim();
+  const base = firstClause.length >= 8 ? firstClause : clean;
+  if (base.length <= max) return base;
+  const cut = base.slice(0, max);
+  const lastSpace = cut.lastIndexOf(" ");
+  return (lastSpace > 20 ? cut.slice(0, lastSpace) : cut).trim() + "…";
+}
+
 /** No-AI fallback: build a handful of prompts straight from the profile fields. */
 function fallbackLibrary(b: BusinessProfile): TemplateSeed[] {
   const loc = b.location?.trim() || "your target market";
   const locWord = b.location?.trim() || "local";
   const what = b.description?.trim() || b.name?.trim() || "the business";
-  const product = b.offer?.trim() || b.description?.trim().slice(0, 80) || "partnership";
+  const product = shortPhrase(b.offer || b.description || "partnership");
   const angle = `authentic partnership fit with ${b.name?.trim() || "the brand"}`;
 
   return [

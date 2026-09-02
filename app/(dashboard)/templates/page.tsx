@@ -41,16 +41,16 @@ export default function TemplatesPage() {
       ) : (
         <div className="grid md:grid-cols-2 gap-3">
           {templates.map((t: any) => (
-            <div key={t.id} className="card p-4">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="font-medium text-ink-900">{t.name}</h3>
-                {t.default_product && (
-                  <span className="badge bg-brand-50 text-brand-700 shrink-0">{titleCase(t.default_product)}</span>
-                )}
-              </div>
-              <p className="text-sm text-ink-600 mt-2">{t.prompt}</p>
+            <div key={t.id} className="card p-4 min-w-0 overflow-hidden">
+              <h3 className="font-medium text-ink-900 break-words">{t.name}</h3>
+              {t.default_product && (
+                <p className="text-xs text-brand-700 font-medium mt-1 break-words">
+                  For: {titleCase(t.default_product)}
+                </p>
+              )}
+              <p className="text-sm text-ink-600 mt-2 break-words">{t.prompt}</p>
               {t.default_message_angle && (
-                <p className="text-xs text-ink-500 mt-2">Angle: {t.default_message_angle}</p>
+                <p className="text-xs text-ink-500 mt-2 break-words">Angle: {t.default_message_angle}</p>
               )}
               <Link href="/discovery" className="text-xs text-brand-700 hover:underline mt-2 inline-block">
                 Use in discovery →

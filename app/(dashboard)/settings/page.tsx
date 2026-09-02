@@ -1,10 +1,11 @@
 import { requireSession } from "@/lib/auth";
 import { listMembers } from "@/lib/services/lookups";
-import { getBusinessProfile } from "@/lib/services/business";
+import { getBusinessProfile, getKnowledge } from "@/lib/services/business";
 import { PageHeader, StatCard } from "@/components/ui";
 import { RoleManager } from "@/components/RoleManager";
 import { ExportButton } from "@/components/ExportButton";
 import { BusinessProfilePanel } from "@/components/BusinessProfilePanel";
+import { DiscoveryKnowledgePanel } from "@/components/DiscoveryKnowledgePanel";
 import { can } from "@/lib/permissions";
 import { aiConfigured } from "@/lib/ai/anthropic";
 
@@ -12,12 +13,14 @@ export default function SettingsPage() {
   const ctx = requireSession();
   const members = listMembers(ctx.teamId);
   const business = getBusinessProfile(ctx.teamId);
+  const knowledge = getKnowledge(ctx.teamId);
 
   return (
     <div className="space-y-5">
       <PageHeader title="Settings" subtitle="Your business, team, integrations & exports" />
 
       <BusinessProfilePanel initial={business} />
+      <DiscoveryKnowledgePanel initial={knowledge} />
 
       <section>
         <h2 className="font-semibold mb-2">Team members &amp; roles</h2>
