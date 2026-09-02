@@ -5,6 +5,14 @@ import { db, uid, nowIso, seedTeam } from "./db";
 import type { UserRole } from "./types";
 
 const COOKIE = "orvion_session";
+
+if (process.env.NODE_ENV === "production" && !process.env.AUTH_SECRET?.trim()) {
+  console.warn(
+    "[auth] AUTH_SECRET is not set — session cookies are signed with a fallback " +
+    "secret that's baked into this (public) repo, so anyone could forge a valid " +
+    "login cookie. Set AUTH_SECRET to a long random string (see DEPLOY.md).",
+  );
+}
 const SECRET = process.env.AUTH_SECRET || "orvion-local-dev-secret-change-me";
 
 export interface SessionContext {
@@ -51,6 +59,7 @@ function unsign(value: string | undefined): string | null {
 export function setSessionCookie(userId: string) {
   cookies().set(COOKIE, sign(userId), {
     httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30,
+    secure: process.env.NODE_ENV === "production",
   });
 }
 
