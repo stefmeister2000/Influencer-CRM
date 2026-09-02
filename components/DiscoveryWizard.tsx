@@ -137,9 +137,18 @@ export function DiscoveryWizard({ templates }: { templates: Template[] }) {
               <ReadOnly label="Locations" value={(filters.regions?.length ? filters.regions : filters.cities)?.join(", ")} />
               <ReadOnly label="Platforms" value={(filters.platforms ?? []).map((p) => p === "tiktok" ? "TikTok" : "Instagram").join(", ")} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <ReadOnly label="Languages" value={filters.languages?.join(", ")} />
-              <ReadOnly label="Followers" value={`${filters.follower_min}–${filters.follower_max}`} />
+            <ReadOnly label="Languages" value={filters.languages?.join(", ")} />
+            <div>
+              <label className="label">Follower range</label>
+              <div className="grid grid-cols-2 gap-3">
+                <input type="number" min={0} step={100} className="input" placeholder="Min"
+                  value={filters.follower_min}
+                  onChange={(e) => setFilters({ ...filters, follower_min: Number(e.target.value) || 0 })} />
+                <input type="number" min={0} step={100} className="input" placeholder="Max"
+                  value={filters.follower_max}
+                  onChange={(e) => setFilters({ ...filters, follower_max: Number(e.target.value) || 0 })} />
+              </div>
+              <p className="text-xs text-ink-500 mt-1">How many followers creators should have — this drives who discovery actually finds.</p>
             </div>
             <ReadOnly label="Categories" value={filters.categories?.join(", ")} />
             <ReadOnly label="Exclude" value={(filters.exclude ?? filters.excluded_niches)?.join(", ")} />
