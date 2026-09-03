@@ -11,7 +11,6 @@ const NAV = [
   { href: "/influencers", label: "Influencers", icon: "☷" },
   { href: "/send-queue", label: "Send & outreach", icon: "➤" },
   { href: "/pipeline", label: "Pipeline", icon: "⠿" },
-  { href: "/templates", label: "Prompt library", icon: "❏" },
   { href: "/settings", label: "Settings", icon: "⚙" },
 ];
 

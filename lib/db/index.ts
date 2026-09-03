@@ -206,18 +206,6 @@ const OLEARYS_BUSINESS = {
     "Fun, energetic, sporty and welcoming. Casual and local — Dutch/Flemish first for Belgium, Dutch for the Netherlands, English where it fits. Never stiff or corporate.",
 };
 
-// name, prompt, product (short label), outreach angle — all O'Learys / Ghent-Hasselt-NL, IG + TikTok.
-const DEFAULT_TEMPLATES: [string, string, string, string][] = [
-  ["Ghent food & foodie creators","Find Ghent-based food, restaurant and 'where to eat' creators on Instagram and TikTok who review spots, do food tours and post what's new in the city. 2k-60k followers, authentic local engagement, not celebrities.","hosted tasting + paid collab","invite them for a hosted tasting at O'Learys Ghent and a Reel/TikTok"],
-  ["Hasselt & Limburg lifestyle","Find Hasselt and Limburg lifestyle, food and going-out creators on Instagram and TikTok who post about local bars, restaurants and events. 2k-50k followers, strong regional audience.","hosted visit + event invites","host them at O'Learys Hasselt for a match night or dinner"],
-  ["Netherlands food & nightlife","Find Dutch food, horeca and nightlife creators on TikTok and Instagram (Randstad and student cities) covering restaurants, bars and student life. 5k-100k followers, Dutch-language, real engagement.","paid collab + booking affiliate","partner for a visit to an O'Learys NL venue plus TikTok content"],
-  ["Student creators (Ghent)","Find student creators and study-life accounts in Ghent on TikTok and Instagram — student deals, nights out, campus life. 1k-40k followers, trusted by a local student audience.","student night promo + free entry/food","get them to a student night at O'Learys Ghent"],
-  ["Sports & football fans","Find Belgian and Dutch football and sports fan creators and watch-party accounts on Instagram and TikTok who post match reactions and where-to-watch content. 3k-80k followers.","match-night hosting + collab","make O'Learys their go-to spot to watch the game"],
-  ["Families & things to do","Find family, parenting and 'things to do with kids' creators in East/West Flanders, Limburg and the Netherlands on Instagram and TikTok. 3k-60k followers, warm local tone.","hosted family visit","invite them for a family meal and games at O'Learys"],
-  ["Beer, cocktails & bar culture","Find craft beer, cocktail and bar-culture creators in Belgium and the Netherlands on Instagram and TikTok. 2k-50k followers, authentic taste-focused content.","hosted tasting + collab","a drinks-focused visit and content collab"],
-  ["Micro & UGC everyday voices","Find relatable micro-creators and UGC-style accounts in Ghent, Hasselt and the Netherlands on TikTok and Instagram who casually vlog daily life, food and nights out. 500-20k followers, high trust with their audience.","hosted visit + gifted","an authentic, low-key visit and honest post"],
-];
-
 /**
  * Where the SQLite file lives.
  * - Local dev: ./data/orvion.db (default).
@@ -348,9 +336,8 @@ export const uid = () => randomUUID();
 export const nowIso = () => new Date().toISOString();
 
 /**
- * Seed a newly created team: default categories, the O'Learys business profile,
- * and an O'Learys-focused prompt library (Ghent / Hasselt / Netherlands,
- * Instagram + TikTok). Everything is editable later in Settings / Prompt library.
+ * Seed a newly created team: default categories and the O'Learys business
+ * profile. Editable any time in Settings.
  */
 export function seedTeam(teamId: string) {
   const cat = db.prepare(
@@ -359,19 +346,11 @@ export function seedTeam(teamId: string) {
   const setting = db.prepare(
     "insert or replace into settings (team_id, key, value, updated_at) values (?,?,?,?)",
   );
-  const tpl = db.prepare(
-    `insert into prompt_templates
-     (id, team_id, name, prompt, default_product, default_message_angle, created_at, updated_at)
-     values (?,?,?,?,?,?,?,?)`,
-  );
   tx(() => {
     for (const name of DEFAULT_CATEGORIES) {
       cat.run(uid(), teamId, name, slugify(name), nowIso());
     }
     setting.run(teamId, "business_profile", JSON.stringify(OLEARYS_BUSINESS), nowIso());
-    for (const [name, prompt, product, angle] of DEFAULT_TEMPLATES) {
-      tpl.run(uid(), teamId, name, prompt, product, angle, nowIso(), nowIso());
-    }
   });
 }
 

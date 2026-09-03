@@ -4,8 +4,6 @@ import { useState, useTransition } from "react";
 import { parsePromptAction, createCampaignAction } from "@/app/actions/campaigns";
 import type { CreatorPlatform, DiscoveryFilters } from "@/lib/types";
 
-type Template = { id: string; name: string; prompt: string; default_product: string | null };
-
 const LOCATIONS = [
   { value: "Ghent", label: "Ghent" },
   { value: "Hasselt", label: "Hasselt" },
@@ -16,7 +14,7 @@ const PLATFORMS: { value: CreatorPlatform; label: string }[] = [
   { value: "tiktok", label: "TikTok" },
 ];
 
-export function DiscoveryWizard({ templates }: { templates: Template[] }) {
+export function DiscoveryWizard() {
   const [prompt, setPrompt] = useState("");
   const [locations, setLocations] = useState<string[]>(["Ghent"]);
   const [platforms, setPlatforms] = useState<CreatorPlatform[]>(["instagram", "tiktok"]);
@@ -45,25 +43,6 @@ export function DiscoveryWizard({ templates }: { templates: Template[] }) {
 
   return (
     <div>
-      {/* Quick-pick categories / templates — one merged list */}
-      {templates.length > 0 && (
-        <div className="card p-3 mb-4">
-          <label className="label">Quick categories &amp; templates — click to fill the prompt</label>
-          <div className="flex flex-wrap gap-1.5">
-            {templates.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => { setPrompt(t.prompt); setFilters(null); }}
-                className="text-xs px-2.5 py-1 rounded-full border border-slate-200 text-ink-700 hover:bg-brand-50 hover:border-brand-300 hover:text-brand-700 transition"
-              >
-                {t.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
     <div className="grid md:grid-cols-2 gap-4">
       {/* Left: prompt input */}
       <div className="card p-5 space-y-3">

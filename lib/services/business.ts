@@ -43,8 +43,8 @@ export function saveKnowledge(ctx: Ctx, text: string) {
 
 /**
  * A plain-text description of the business, injected into every AI prompt
- * (discovery, scoring, message generation, prompt library) so outreach and
- * targeting stay locked to THIS business and niche.
+ * (discovery, scoring, message generation) so outreach and targeting stay
+ * locked to THIS business and niche.
  */
 export function getBusinessContext(teamId: string): string {
   const p = getBusinessProfile(teamId);

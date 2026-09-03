@@ -1,43 +1,7 @@
-import { db, tx, uid, nowIso, insertRow } from "../db";
+import { db, uid, nowIso, insertRow } from "../db";
 import { logEvent } from "./audit";
 
 interface Ctx { teamId: string; userId: string; }
-
-export function listTemplates(teamId: string) {
-  return db.prepare(
-    "select * from prompt_templates where team_id = ? and deleted_at is null order by name",
-  ).all(teamId) as any[];
-}
-
-/** Soft-delete the whole prompt library, then insert a fresh set. */
-export function replacePromptLibrary(
-  ctx: Ctx,
-  seeds: { name: string; prompt: string; product?: string; angle?: string }[],
-) {
-  const del = db.prepare(
-    "update prompt_templates set deleted_at = ? where team_id = ? and deleted_at is null",
-  );
-  const ins = db.prepare(
-    `insert into prompt_templates
-     (id, team_id, name, prompt, default_product, default_message_angle, created_by, created_at, updated_at)
-     values (?,?,?,?,?,?,?,?,?)`,
-  );
-  // Belt-and-suspenders: "product" renders as a short label in the UI —
-  // clamp it here too, regardless of what generated the seed.
-  const clamp = (v: string | undefined, max: number) =>
-    v && v.length > max ? v.slice(0, max - 1).trim() + "…" : v || null;
-
-  tx(() => {
-    del.run(nowIso(), ctx.teamId);
-    for (const s of seeds) {
-      ins.run(
-        uid(), ctx.teamId, s.name.slice(0, 80), s.prompt.slice(0, 800),
-        clamp(s.product, 60), clamp(s.angle, 160),
-        ctx.userId, nowIso(), nowIso(),
-      );
-    }
-  });
-}
 
 export function listAffiliates(teamId: string) {
   return db.prepare(
