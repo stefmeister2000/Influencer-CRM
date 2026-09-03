@@ -265,10 +265,11 @@ function open(): DB {
 
   // node:sqlite defaults busy_timeout to 0 (fail immediately on a locked db).
   // `next build` opens the file from several worker processes at once, so give
-  // writers time to wait it out.
-  db.exec("PRAGMA busy_timeout = 20000");
-  db.exec("PRAGMA journal_mode = WAL");
-  db.exec("PRAGMA foreign_keys = ON");
+  // writers time to wait it out. These calls can themselves race with another
+  // process's BEGIN IMMEDIATE, so retry them the same way as schema init.
+  withRetry(() => db.exec("PRAGMA busy_timeout = 20000"));
+  withRetry(() => db.exec("PRAGMA journal_mode = WAL"));
+  withRetry(() => db.exec("PRAGMA foreign_keys = ON"));
 
   // `next build` (and multiple server instances) can open this same file from
   // several processes at once. BEGIN IMMEDIATE takes the write lock up front, so
@@ -280,8 +281,20 @@ function open(): DB {
   return db;
 }
 
-function initSchema(db: DB, attempt = 0): void {
+function withRetry<T>(fn: () => T, attempt = 0): T {
   try {
+    return fn();
+  } catch (err: any) {
+    if (attempt < 10 && /database is locked|SQLITE_BUSY/i.test(String(err?.message))) {
+      sleepSync(200 * Math.pow(1.5, attempt));
+      return withRetry(fn, attempt + 1);
+    }
+    throw err;
+  }
+}
+
+function initSchema(db: DB): void {
+  withRetry(() => {
     db.exec("BEGIN IMMEDIATE");
     try {
       db.exec(SCHEMA);
@@ -291,13 +304,7 @@ function initSchema(db: DB, attempt = 0): void {
       db.exec("ROLLBACK");
       throw err;
     }
-  } catch (err: any) {
-    if (attempt < 5 && /database is locked|SQLITE_BUSY/i.test(String(err?.message))) {
-      sleepSync(150 * (attempt + 1));
-      return initSchema(db, attempt + 1);
-    }
-    throw err;
-  }
+  });
 }
 
 /** Synchronous sleep — module init can't be async, and this only runs a handful of times. */
