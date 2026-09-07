@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createCompanyAction, switchCompanyAction } from "@/app/actions/team";
+import { createCompanyAction, switchCompanyAction, renameTeamAction } from "@/app/actions/team";
 import type { CompanySummary } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
 
@@ -66,8 +66,7 @@ export function CompanyList({ companies, currentTeamId }: { companies: CompanySu
               return (
                 <tr key={c.id} className={isCurrent ? "bg-brand-50/50" : ""}>
                   <td className="px-4 py-2.5 font-medium text-ink-900">
-                    {c.name}
-                    {isCurrent && <span className="badge bg-brand-100 text-brand-700 ml-2">Currently viewing</span>}
+                    <CompanyNameCell id={c.id} name={c.name} isCurrent={isCurrent} />
                   </td>
                   <td className="px-4 py-2.5 text-ink-600">{c.member_count}</td>
                   <td className="px-4 py-2.5 text-ink-600">{c.influencer_count}</td>
@@ -86,5 +85,59 @@ export function CompanyList({ companies, currentTeamId }: { companies: CompanySu
         </table>
       </div>
     </div>
+  );
+}
+
+/** Click a company's name to rename it right here — no need to switch into it first. */
+function CompanyNameCell({ id, name, isCurrent }: { id: string; name: string; isCurrent: boolean }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(name);
+  const [pending, start] = useTransition();
+  const router = useRouter();
+
+  function save() {
+    const clean = value.trim();
+    if (!clean || clean === name) { setEditing(false); setValue(name); return; }
+    start(async () => {
+      await renameTeamAction(clean, id);
+      setEditing(false);
+      router.refresh();
+    });
+  }
+
+  if (!editing) {
+    return (
+      <span className="inline-flex items-center gap-2">
+        {name}
+        {isCurrent && <span className="badge bg-brand-100 text-brand-700">Currently viewing</span>}
+        <button type="button" className="text-xs text-ink-400 hover:text-brand-700 underline"
+          onClick={() => { setValue(name); setEditing(true); }}>
+          Rename
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <input
+        autoFocus
+        className="input py-1 text-sm w-44"
+        value={value}
+        disabled={pending}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") save();
+          if (e.key === "Escape") { setEditing(false); setValue(name); }
+        }}
+      />
+      <button className="btn-primary py-1 px-2 text-xs" disabled={pending} onClick={save}>
+        {pending ? "…" : "Save"}
+      </button>
+      <button className="btn-ghost py-1 px-2 text-xs" disabled={pending}
+        onClick={() => { setEditing(false); setValue(name); }}>
+        Cancel
+      </button>
+    </span>
   );
 }

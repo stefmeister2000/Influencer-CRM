@@ -51,13 +51,20 @@ export async function revokeInviteAction(id: string) {
   revalidatePath("/settings");
 }
 
-/** Admin-only: rename the company/team. Distinct from the marketing "business name" in the Business profile. */
-export async function renameTeamAction(name: string) {
+/**
+ * Admin-only: rename a company. Distinct from the marketing "business name" in
+ * the Business profile. `teamId` lets a platform admin rename any company
+ * straight from the /companies list, without switching into it first;
+ * ignored (defaults to their own team) for everyone else.
+ */
+export async function renameTeamAction(name: string, teamId?: string) {
   const ctx = requireSession();
   if (!can.manageTeam(ctx.role)) throw new Error("Only admins can rename the company");
-  renameTeam(ctx.teamId, name);
+  const targetTeam = ctx.isPlatformAdmin && teamId ? teamId : ctx.teamId;
+  renameTeam(targetTeam, name);
   revalidatePath("/settings");
   revalidatePath("/dashboard");
+  revalidatePath("/companies");
 }
 
 /** Any signed-in user can update their own display name and, optionally, their password. */
