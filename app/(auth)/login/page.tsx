@@ -11,10 +11,10 @@ export default function LoginPage({
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-brand-600 text-white font-bold text-xl mb-3">
-            O
+            ✦
           </div>
-          <h1 className="text-xl font-semibold text-ink-900">O'Learys — Influencer CRM</h1>
-          <p className="text-sm text-ink-500">Creator discovery &amp; outreach — Ghent · Hasselt · NL</p>
+          <h1 className="text-xl font-semibold text-ink-900">Influencer CRM</h1>
+          <p className="text-sm text-ink-500">Compliant creator discovery &amp; outreach</p>
         </div>
 
         {searchParams.error && (

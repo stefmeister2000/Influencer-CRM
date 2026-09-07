@@ -38,10 +38,10 @@ export function DiscoveryKnowledgePanel({ initial }: { initial: string }) {
           <textarea
             className="input min-h-[140px]"
             placeholder={`e.g.
-- Best-performing creators so far: casual food/nightlife voices, not polished ads.
-- Avoid: fitness-only accounts, no crossover with our audience.
-- Ghent students respond best to free-entry + food angle; NL audience prefers the sports angle.
-- New: added a vegan menu — worth mentioning to food creators.`}
+- Best-performing creators so far: casual, relatable voices, not polished ads.
+- Avoid: accounts with no real crossover with our audience.
+- One market responds best to a discount angle; another prefers a lifestyle angle.
+- New: launched a new product line — worth mentioning to creators going forward.`}
             value={text}
             onChange={(e) => { setText(e.target.value); setSaved(false); }}
           />

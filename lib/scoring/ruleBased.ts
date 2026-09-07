@@ -49,9 +49,6 @@ export function ruleBasedScore(
     if (inf.language && filters.languages?.some((l) => eq(l, inf.language))) fit += 7;
     if (filters.gender_focus && filters.gender_focus !== "any" &&
         eq(inf.gender_focus, filters.gender_focus)) fit += 5;
-  } else {
-    if (/belgium|belgi[eë]|netherlands|nederland/i.test(inf.country ?? "")) fit += 20;
-    if (/ghent|gent|hasselt/i.test(inf.city ?? "")) fit += 8;
   }
   fit = clamp(fit);
 

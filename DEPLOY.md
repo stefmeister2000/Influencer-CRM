@@ -34,9 +34,10 @@ Railway sets `PORT` automatically — do **not** set it yourself.
 
 ## 4. Deploy
 
-First boot creates the schema. The first sign-up creates the admin user and seeds
-the O'Learys team (business profile + prompt library) into `/data/orvion.db`.
-Every account and everything created after lives in that file on the volume.
+First boot creates the schema. The first sign-up creates the admin user and a
+fresh team with generic starter categories — no business is pre-configured;
+set yours in Settings → Business profile. Every account and everything created
+after lives in `/data/orvion.db` on the volume.
 
 ## Common failure causes
 

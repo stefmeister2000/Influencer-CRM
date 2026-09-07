@@ -122,7 +122,7 @@ export interface Message {
 export interface DiscoveryFilters {
   country: string;
   cities: string[];
-  /** Friendly target locations chosen in the wizard, e.g. "Ghent", "Netherlands". */
+  /** Friendly target locations chosen in the wizard, e.g. "New York", "Nationwide". */
   regions?: string[];
   /** Which platforms to search, e.g. ["instagram","tiktok"]. */
   platforms?: CreatorPlatform[];

@@ -10,7 +10,7 @@ Return JSON with EXACTLY these keys:
 {
   "country": string,
   "cities": string[],
-  "regions": string[],             // friendly target locations, e.g. ["Ghent","Netherlands"]
+  "regions": string[],             // friendly target locations, e.g. ["Austin","Nationwide"]
   "platforms": string[],           // subset of ["instagram","tiktok"]
   "categories": string[],          // creator niches, e.g. food, nightlife, student, sports
   "product_focus": string,         // the business's product/service this targets
@@ -42,7 +42,7 @@ const FALLBACK: DiscoveryFilters = {
   product_focus: "",
   follower_min: 3000,
   follower_max: 100000,
-  languages: ["Dutch", "English"],
+  languages: ["English"],
   gender_focus: "any",
   exclude: ["celebrities", "fake engagement", "explicit content"],
   message_angle: "a strong partnership fit",

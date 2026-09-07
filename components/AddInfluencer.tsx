@@ -50,8 +50,8 @@ function ManualForm({ campaigns, onDone }: { campaigns: Campaign[]; onDone: () =
         <Input name="full_name" label="Full name" />
         <Input name="profile_url" label="Profile URL" />
         <Input name="follower_count" label="Followers" type="number" />
-        <Input name="country" label="Country" defaultValue="Belgium" />
-        <Input name="city" label="City" defaultValue="Ghent" />
+        <Input name="country" label="Country" />
+        <Input name="city" label="City" />
         <Input name="category" label="Category" />
         <Input name="email" label="Email" />
         <Input name="whatsapp" label="WhatsApp" />

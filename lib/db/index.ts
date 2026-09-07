@@ -94,6 +94,13 @@ create table if not exists categories (
   id text primary key, team_id text not null, name text not null, slug text not null,
   color text default '#e0f2fe', is_default integer default 0, created_at text not null
 );
+-- User-managed discovery locations (e.g. cities/markets you target) — start
+-- empty per team; add your own in Discovery. No hardcoded cities: this app is
+-- used by different businesses in different markets.
+create table if not exists locations (
+  id text primary key, team_id text not null, name text not null, created_at text not null
+);
+create index if not exists idx_locations_team on locations(team_id);
 create table if not exists tags (
   id text primary key, team_id text not null, name text not null,
   color text default '#f1f5f9', created_at text not null
@@ -180,31 +187,14 @@ create table if not exists content_scripts (
 create index if not exists idx_scripts_team on content_scripts(team_id, status);
 `;
 
+// Generic, business-agnostic starter niches — every team can add/remove their
+// own from Discovery afterward. Nothing here assumes a specific industry.
 const DEFAULT_CATEGORIES = [
-  "Food & restaurant creator","Foodie / where to eat","Bar & nightlife","Beer & craft beer",
-  "Cocktails & drinks","Sports fan / football","Student life","Lifestyle creator",
-  "Family & things to do","Events & going out","Ghent creator","Hasselt / Limburg creator",
-  "Netherlands creator","Dutch-language creator","Comedy / entertainment","UGC / micro creator",
-  "Travel & city guide","Group & birthday hosting",
+  "Lifestyle creator", "Food & beverage", "Fashion & beauty", "Fitness & health",
+  "Travel", "Tech & gadgets", "Family & parenting", "Business & finance",
+  "Gaming", "Home & design", "Comedy & entertainment", "UGC / micro creator",
+  "Local / city guide",
 ];
-
-/**
- * Default business profile for a new team — this instance is set up for O'Learys
- * (sports bar & restaurant; Ghent & Hasselt in Belgium, plus the Netherlands).
- * Editable any time in Settings → Business profile.
- */
-const OLEARYS_BUSINESS = {
-  name: "O'Learys",
-  website: "https://olearys.be",
-  instagram: "",
-  description:
-    "O'Learys is an American (Boston-themed) sports bar & restaurant: burgers, ribs, wings and sharing plates, cocktails and beer, live sport on big screens, arcade games and events, plus group bookings, birthdays, team nights and student deals. Venues in Ghent and Hasselt (Belgium) and across the Netherlands. Audience: students and young adults 18-35, sports fans, groups of friends, families and after-work crowds who go out to eat, drink and watch the game.",
-  location: "Ghent & Hasselt (Belgium) and the Netherlands",
-  offer:
-    "Creator partnership: a hosted visit for you + guests (food & drinks covered), event and match-night invites, and paid collaborations or an affiliate deal on bookings — in exchange for a Reel/TikTok + Stories.",
-  voice:
-    "Fun, energetic, sporty and welcoming. Casual and local — Dutch/Flemish first for Belgium, Dutch for the Netherlands, English where it fits. Never stiff or corporate.",
-};
 
 /**
  * Where the SQLite file lives.
@@ -343,21 +333,18 @@ export const uid = () => randomUUID();
 export const nowIso = () => new Date().toISOString();
 
 /**
- * Seed a newly created team: default categories and the O'Learys business
- * profile. Editable any time in Settings.
+ * Seed a newly created team with generic starter categories. The business
+ * profile is intentionally left empty — set it in Settings so the app targets
+ * YOUR business (this app isn't tied to any one company or market).
  */
 export function seedTeam(teamId: string) {
   const cat = db.prepare(
     "insert into categories (id, team_id, name, slug, is_default, created_at) values (?,?,?,?,1,?)",
   );
-  const setting = db.prepare(
-    "insert or replace into settings (team_id, key, value, updated_at) values (?,?,?,?)",
-  );
   tx(() => {
     for (const name of DEFAULT_CATEGORIES) {
       cat.run(uid(), teamId, name, slugify(name), nowIso());
     }
-    setting.run(teamId, "business_profile", JSON.stringify(OLEARYS_BUSINESS), nowIso());
   });
 }
 

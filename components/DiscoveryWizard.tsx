@@ -2,21 +2,22 @@
 
 import { useState, useTransition } from "react";
 import { parsePromptAction, createCampaignAction } from "@/app/actions/campaigns";
+import {
+  addLocationAction, deleteLocationAction, addCategoryAction, deleteCategoryAction,
+} from "@/app/actions/discoveryTags";
+import { TagPicker } from "@/components/TagPicker";
+import type { Tag } from "@/lib/services/discoveryTags";
 import type { CreatorPlatform, DiscoveryFilters } from "@/lib/types";
 
-const LOCATIONS = [
-  { value: "Ghent", label: "Ghent" },
-  { value: "Hasselt", label: "Hasselt" },
-  { value: "Netherlands", label: "Netherlands" },
-];
 const PLATFORMS: { value: CreatorPlatform; label: string }[] = [
   { value: "instagram", label: "Instagram" },
   { value: "tiktok", label: "TikTok" },
 ];
 
-export function DiscoveryWizard() {
+export function DiscoveryWizard({ locations, categories }: { locations: Tag[]; categories: Tag[] }) {
   const [prompt, setPrompt] = useState("");
-  const [locations, setLocations] = useState<string[]>(["Ghent"]);
+  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [platforms, setPlatforms] = useState<CreatorPlatform[]>(["instagram", "tiktok"]);
   const [filters, setFilters] = useState<DiscoveryFilters | null>(null);
   const [name, setName] = useState("");
@@ -26,15 +27,19 @@ export function DiscoveryWizard() {
 
   const toggle = <T,>(list: T[], v: T, set: (x: T[]) => void) =>
     set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+  const toggleLocation = (v: string) => toggle(selectedLocations, v, setSelectedLocations);
+  const toggleCategory = (v: string) => toggle(selectedCategories, v, setSelectedCategories);
 
   function parse() {
     setError(null);
     if (!platforms.length) { setError("Pick at least one platform."); return; }
     start(async () => {
       try {
-        const f = await parsePromptAction(prompt, { regions: locations, platforms });
+        const f = await parsePromptAction(prompt, {
+          regions: selectedLocations, platforms, categories: selectedCategories,
+        });
         setFilters(f);
-        if (!name) setName(suggestName(f, locations, platforms));
+        if (!name) setName(suggestName(f, selectedLocations, platforms));
       } catch (e: any) {
         setError(e.message ?? "Failed to parse prompt");
       }
@@ -45,24 +50,28 @@ export function DiscoveryWizard() {
     <div>
     <div className="grid md:grid-cols-2 gap-4">
       {/* Left: prompt input */}
-      <div className="card p-5 space-y-3">
-        <div>
-          <label className="label">Find creators in</label>
-          <div className="flex flex-wrap gap-2">
-            {LOCATIONS.map((l) => (
-              <button key={l.value} type="button"
-                onClick={() => toggle(locations, l.value, setLocations)}
-                className={
-                  "rounded-lg border px-3 py-1.5 text-sm font-medium transition " +
-                  (locations.includes(l.value)
-                    ? "border-brand-400 bg-brand-50 text-brand-700 ring-2 ring-brand-200"
-                    : "border-slate-200 text-ink-700 hover:bg-slate-50")
-                }>
-                {l.label}
-              </button>
-            ))}
-          </div>
-        </div>
+      <div className="card p-5 space-y-4">
+        <TagPicker
+          label="Find creators in (optional)"
+          hint="Add the cities/markets you target — saved for next time. Leave empty to let the AI decide from your prompt."
+          tags={locations}
+          selected={selectedLocations}
+          onToggle={toggleLocation}
+          onAdd={(name) => addLocationAction(name)}
+          onRemove={(id) => deleteLocationAction(id)}
+          addPlaceholder="e.g. New York"
+        />
+
+        <TagPicker
+          label="Niches / categories (optional)"
+          hint="Add the creator niches you care about — saved for next time."
+          tags={categories}
+          selected={selectedCategories}
+          onToggle={toggleCategory}
+          onAdd={(name) => addCategoryAction(name)}
+          onRemove={(id) => deleteCategoryAction(id)}
+          addPlaceholder="e.g. Fitness"
+        />
 
         <div>
           <label className="label">Platforms</label>
@@ -82,13 +91,15 @@ export function DiscoveryWizard() {
           </div>
         </div>
 
-        <label className="label">Discovery prompt</label>
-        <textarea
-          className="input min-h-[140px]"
-          placeholder="Describe who you want, e.g.: food and going-out creators, students, sports fans, 2k–60k followers, authentic local engagement, avoid celebrities. (The AI already knows O'Learys and the locations/platforms above.)"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-        />
+        <div>
+          <label className="label">Discovery prompt</label>
+          <textarea
+            className="input min-h-[140px]"
+            placeholder="Describe who you want, e.g.: food and going-out creators, students, sports fans, 2k–60k followers, authentic local engagement, avoid celebrities. (The AI already knows your business from Settings, plus the locations/categories/platforms above.)"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+          />
+        </div>
         <button onClick={parse} disabled={pending || !prompt.trim()} className="btn-primary w-full">
           {pending ? "Analyzing…" : "Analyze prompt → filters"}
         </button>
@@ -135,13 +146,13 @@ export function DiscoveryWizard() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label">Payout per booking (EUR, optional)</label>
+                <label className="label">Payout per booking (optional)</label>
                 <input name="affiliate_payout" type="number" className="input"
                   value={payout} onChange={(e) => setPayout(Number(e.target.value))} />
               </div>
               <div>
                 <label className="label">Outreach goal</label>
-                <input name="outreach_goal" className="input" defaultValue="creator partnership / hosted visit" />
+                <input name="outreach_goal" className="input" defaultValue="creator partnership" />
               </div>
             </div>
 

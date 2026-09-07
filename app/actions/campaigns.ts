@@ -11,16 +11,18 @@ import type { CreatorPlatform, DiscoveryFilters } from "@/lib/types";
 
 export async function parsePromptAction(
   prompt: string,
-  opts?: { regions?: string[]; platforms?: CreatorPlatform[] },
+  opts?: { regions?: string[]; platforms?: CreatorPlatform[]; categories?: string[] },
 ): Promise<DiscoveryFilters> {
   const ctx = requireSession();
   const { getBusinessContext } = await import("@/lib/services/business");
 
   const regions = (opts?.regions ?? []).filter(Boolean);
   const platforms = (opts?.platforms ?? []).filter(Boolean);
+  const categories = (opts?.categories ?? []).filter(Boolean);
   const hints = [
     regions.length ? `Target locations: ${regions.join(", ")}.` : "",
     platforms.length ? `Platforms: ${platforms.join(", ")}.` : "",
+    categories.length ? `Niches/categories: ${categories.join(", ")}.` : "",
   ].filter(Boolean).join(" ");
   const fullPrompt = hints ? `${prompt}\n\n${hints}` : prompt;
 
@@ -28,6 +30,7 @@ export async function parsePromptAction(
   // The wizard's explicit picks win over whatever the model inferred.
   if (regions.length) filters.regions = regions;
   if (platforms.length) filters.platforms = platforms;
+  if (categories.length) filters.categories = categories;
   return filters;
 }
 

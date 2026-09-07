@@ -69,7 +69,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   viewer: "Viewer",
 };
 
-export const DEFAULT_AFFILIATE_PAYOUT = 0; // EUR per confirmed booking (set per campaign)
+export const DEFAULT_AFFILIATE_PAYOUT = 0; // per confirmed booking (set per campaign, currency-agnostic)
 export const PAGE_SIZE = 25;
 
 /**
