@@ -5,15 +5,23 @@ import { useRouter } from "next/navigation";
 import { createInviteAction, revokeInviteAction } from "@/app/actions/team";
 import { ROLE_LABELS } from "@/lib/constants";
 import type { UserRole } from "@/lib/types";
-import type { Invite } from "@/lib/auth";
+import type { Invite, CompanySummary } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
 
 const INVITABLE_ROLES: UserRole[] = ["admin", "sales_manager", "outreach_assistant", "viewer"];
 
-export function InviteManager({ invites }: { invites: Invite[] }) {
+export function InviteManager({
+  invites, companies, currentTeamId,
+}: {
+  invites: Invite[];
+  /** Only passed for the platform admin — lets them target a company other than the one they're viewing. */
+  companies?: CompanySummary[];
+  currentTeamId?: string;
+}) {
   const [items, setItems] = useState(invites);
   const [role, setRole] = useState<UserRole>("outreach_assistant");
   const [email, setEmail] = useState("");
+  const [targetTeam, setTargetTeam] = useState(currentTeamId ?? "");
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [pending, start] = useTransition();
@@ -25,13 +33,16 @@ export function InviteManager({ invites }: { invites: Invite[] }) {
     setLink(null);
     start(async () => {
       try {
-        const { token } = await createInviteAction(role, email);
+        const { token } = await createInviteAction(role, email, companies ? targetTeam : undefined);
         const url = `${window.location.origin}/invite/${token}`;
         setLink(url);
-        setItems((cur) => [
-          { id: token, team_id: "", token, email: email || null, role, created_at: new Date().toISOString(), expires_at: null, accepted_at: null },
-          ...cur,
-        ]);
+        // Only show it in this list if it's for the company currently being viewed.
+        if (!companies || targetTeam === currentTeamId) {
+          setItems((cur) => [
+            { id: token, team_id: "", token, email: email || null, role, created_at: new Date().toISOString(), expires_at: null, accepted_at: null },
+            ...cur,
+          ]);
+        }
         setEmail("");
         router.refresh();
       } catch (e: any) {
@@ -63,6 +74,14 @@ export function InviteManager({ invites }: { invites: Invite[] }) {
       </div>
 
       <div className="flex flex-wrap items-end gap-2">
+        {companies && (
+          <div>
+            <label className="label">Company</label>
+            <select className="input py-1.5 w-44" value={targetTeam} onChange={(e) => setTargetTeam(e.target.value)}>
+              {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+        )}
         <div>
           <label className="label">Role</label>
           <select className="input py-1.5 w-40" value={role} onChange={(e) => setRole(e.target.value as UserRole)}>

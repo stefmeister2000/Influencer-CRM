@@ -8,6 +8,7 @@ import { saveThemeColor } from "@/lib/services/business";
 import { isValidHexColor } from "@/lib/theme";
 import {
   createInvite, revokeInvite, renameTeam, updateProfile,
+  setActiveTeam, listAllCompanies, createCompany, type CompanySummary,
 } from "@/lib/auth";
 import { logAudit } from "@/lib/services/audit";
 import type { UserRole } from "@/lib/types";
@@ -23,13 +24,20 @@ export async function updateRoleAction(targetUserId: string, role: UserRole) {
   revalidatePath("/settings");
 }
 
-/** Generate a shareable invite link. No email is sent — copy the returned link and share it yourself. */
-export async function createInviteAction(role: UserRole, email: string): Promise<{ token: string }> {
+/**
+ * Generate a shareable invite link. No email is sent — copy the returned link
+ * and share it yourself. `teamId` lets a platform admin target a company
+ * other than the one they're currently viewing; ignored for everyone else.
+ */
+export async function createInviteAction(
+  role: UserRole, email: string, teamId?: string,
+): Promise<{ token: string }> {
   const ctx = requireSession();
   if (!can.manageTeam(ctx.role)) throw new Error("Only admins can invite teammates");
-  const { token } = createInvite(ctx, { role, email });
+  const targetTeam = ctx.isPlatformAdmin && teamId ? teamId : ctx.teamId;
+  const { token } = createInvite(ctx, { role, email, teamId: targetTeam });
   logAudit({
-    teamId: ctx.teamId, actorId: ctx.userId, action: "invite.created",
+    teamId: targetTeam, actorId: ctx.userId, action: "invite.created",
     entity: "invites", after: { role, email: email || null },
   });
   revalidatePath("/settings");
@@ -70,4 +78,33 @@ export async function saveThemeColorAction(hex: string | null) {
   revalidatePath("/settings");
   revalidatePath("/dashboard");
   revalidatePath("/");
+}
+
+// --- platform admin: multiple companies ---------------------------------------
+
+export async function listCompaniesAction(): Promise<CompanySummary[]> {
+  const ctx = requireSession();
+  if (!ctx.isPlatformAdmin) throw new Error("Not allowed");
+  return listAllCompanies();
+}
+
+/** Platform-admin only: create a brand-new company (its own team, no members yet). */
+export async function createCompanyAction(name: string): Promise<{ teamId: string }> {
+  const ctx = requireSession();
+  if (!ctx.isPlatformAdmin) throw new Error("Only the platform admin can create companies");
+  const result = createCompany(name);
+  logAudit({
+    teamId: result.teamId, actorId: ctx.userId, action: "company.created",
+    entity: "teams", entityId: result.teamId, after: { name },
+  });
+  revalidatePath("/companies");
+  return result;
+}
+
+/** Platform-admin only: view/act as a different company, or pass null to return to your own. */
+export async function switchCompanyAction(teamId: string | null) {
+  const ctx = requireSession();
+  if (!ctx.isPlatformAdmin) throw new Error("Not allowed");
+  setActiveTeam(teamId);
+  revalidatePath("/", "layout");
 }

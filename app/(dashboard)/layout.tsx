@@ -14,7 +14,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Per-team brand color override — only rendered when a team has set one,
           so every other team keeps the app's default palette untouched. */}
       {themeColor && <style dangerouslySetInnerHTML={{ __html: `:root{${brandCssVars(themeColor)}}` }} />}
-      <Sidebar businessName={businessName} />
+      <Sidebar businessName={businessName} isPlatformAdmin={session.isPlatformAdmin} />
       <div className="flex-1 min-w-0">
         <Topbar session={session} businessName={businessName} />
         <main className="p-5 max-w-7xl mx-auto">{children}</main>

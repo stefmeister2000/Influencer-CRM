@@ -47,6 +47,9 @@ create table if not exists users (
   full_name text,
   role text not null default 'admin',
   password_hash text not null,
+  -- The platform owner: can create companies, switch into any of them, and
+  -- send invites for any of them. Not a per-team thing — see runMigrations().
+  is_platform_admin integer not null default 0,
   created_at text not null, updated_at text not null
 );
 
@@ -313,6 +316,16 @@ function runMigrations(db: DB) {
   ensureColumn(db, "content_scripts", "format", "text default 'video'");
   // Instagram + TikTok: which platform a creator's handle belongs to.
   ensureColumn(db, "influencers", "platform", "text default 'instagram'");
+  ensureColumn(db, "users", "is_platform_admin", "integer not null default 0");
+
+  // One-time backfill: whoever created the very first account on this
+  // instance becomes the platform admin, unless someone already holds that
+  // flag. Safe to run on every boot — it's a no-op once anyone is flagged.
+  db.exec(`
+    update users set is_platform_admin = 1
+    where id = (select id from users order by created_at asc limit 1)
+      and (select count(*) from users where is_platform_admin = 1) = 0
+  `);
 }
 
 function ensureColumn(db: DB, table: string, column: string, ddl: string) {

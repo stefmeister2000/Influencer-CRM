@@ -5,6 +5,8 @@ import { db, uid, nowIso, seedTeam } from "./db";
 import type { UserRole } from "./types";
 
 const COOKIE = "orvion_session";
+/** Which company a platform admin is currently "viewing as" — see getSession(). */
+const ACTIVE_TEAM_COOKIE = "orvion_active_team";
 
 if (process.env.NODE_ENV === "production" && !process.env.AUTH_SECRET?.trim()) {
   console.warn(
@@ -19,8 +21,13 @@ export interface SessionContext {
   userId: string;
   email: string;
   fullName: string | null;
+  /** The company currently being acted on — the user's own, unless a platform admin has switched. */
   teamId: string;
+  /** Effective role for `teamId` above (always "admin" while a platform admin is viewing another company). */
   role: UserRole;
+  isPlatformAdmin: boolean;
+  /** The user's own company, regardless of which one they're currently viewing. */
+  homeTeamId: string;
 }
 
 // --- password hashing (scrypt) ---------------------------------------------
@@ -67,17 +74,45 @@ export function clearSessionCookie() {
   cookies().delete(COOKIE);
 }
 
+/** Platform-admin only: set (or clear, with null) which company they're viewing as. */
+export function setActiveTeam(teamId: string | null) {
+  if (teamId) {
+    cookies().set(ACTIVE_TEAM_COOKIE, teamId, {
+      httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30,
+      secure: process.env.NODE_ENV === "production",
+    });
+  } else {
+    cookies().delete(ACTIVE_TEAM_COOKIE);
+  }
+}
+
 // --- session lookup --------------------------------------------------------
 export function getSession(): SessionContext | null {
   const userId = unsign(cookies().get(COOKIE)?.value);
   if (!userId) return null;
   const user = db.prepare(
-    "select id, team_id, email, full_name, role from users where id = ?",
+    "select id, team_id, email, full_name, role, is_platform_admin from users where id = ?",
   ).get(userId) as any;
   if (!user) return null;
+
+  const isPlatformAdmin = Boolean(user.is_platform_admin);
+  let teamId: string = user.team_id;
+  let role = (user.role ?? "viewer") as UserRole;
+
+  if (isPlatformAdmin) {
+    const activeTeam = cookies().get(ACTIVE_TEAM_COOKIE)?.value;
+    if (activeTeam) {
+      const exists = db.prepare("select id from teams where id = ?").get(activeTeam);
+      if (exists) {
+        teamId = activeTeam;
+        role = "admin"; // the platform admin manages every company as its admin
+      }
+    }
+  }
+
   return {
     userId: user.id, email: user.email, fullName: user.full_name,
-    teamId: user.team_id, role: (user.role ?? "viewer") as UserRole,
+    teamId, role, isPlatformAdmin, homeTeamId: user.team_id,
   };
 }
 
@@ -94,6 +129,11 @@ export function createAccount(args: {
   const existing = db.prepare("select id from users where email = ?").get(args.email);
   if (existing) throw new Error("An account with that email already exists.");
 
+  // The very first person to ever sign up on this instance owns the platform
+  // (can create/switch between companies). Existing instances get this
+  // backfilled on the next boot instead — see runMigrations() in lib/db.
+  const isFirstEver = userCount() === 0;
+
   const teamId = uid();
   db.prepare("insert into teams (id, name, created_at, updated_at) values (?,?,?,?)")
     .run(teamId, args.teamName || "My Team", nowIso(), nowIso());
@@ -102,10 +142,10 @@ export function createAccount(args: {
   const userId = uid();
   // First user of a team is admin.
   db.prepare(
-    `insert into users (id, team_id, email, full_name, role, password_hash, created_at, updated_at)
-     values (?,?,?,?,?,?,?,?)`,
+    `insert into users (id, team_id, email, full_name, role, password_hash, is_platform_admin, created_at, updated_at)
+     values (?,?,?,?,?,?,?,?,?)`,
   ).run(userId, teamId, args.email, args.fullName ?? null, "admin",
-        hashPassword(args.password), nowIso(), nowIso());
+        hashPassword(args.password), isFirstEver ? 1 : 0, nowIso(), nowIso());
 
   return { userId };
 }
@@ -134,6 +174,33 @@ export function renameTeam(teamId: string, name: string) {
   db.prepare("update teams set name = ?, updated_at = ? where id = ?").run(clean, nowIso(), teamId);
 }
 
+// --- platform admin: multiple companies ---------------------------------------
+
+export interface CompanySummary {
+  id: string; name: string; created_at: string; member_count: number; influencer_count: number;
+}
+
+/** Every company on this instance, for the platform admin's switcher. */
+export function listAllCompanies(): CompanySummary[] {
+  return db.prepare(`
+    select t.id, t.name, t.created_at,
+      (select count(*) from users u where u.team_id = t.id) as member_count,
+      (select count(*) from influencers i where i.team_id = t.id and i.deleted_at is null) as influencer_count
+    from teams t order by t.created_at asc
+  `).all() as CompanySummary[];
+}
+
+/** Platform-admin only: spin up a brand-new company (its own team, generic starter categories, no members yet). */
+export function createCompany(name: string): { teamId: string } {
+  const clean = name.trim();
+  if (!clean) throw new Error("Company name can't be empty.");
+  const teamId = uid();
+  db.prepare("insert into teams (id, name, created_at, updated_at) values (?,?,?,?)")
+    .run(teamId, clean, nowIso(), nowIso());
+  seedTeam(teamId);
+  return { teamId };
+}
+
 // --- self-service profile edits ----------------------------------------------
 
 export function updateProfile(
@@ -157,16 +224,21 @@ export interface Invite {
 }
 export interface InviteWithTeam extends Invite { team_name: string; }
 
-/** Generate a shareable invite link for this team. No email is sent — share the link yourself. */
+/**
+ * Generate a shareable invite link. No email is sent — share the link yourself.
+ * Defaults to the caller's own team; pass `teamId` to target a different
+ * company (platform admins only — enforced at the action layer).
+ */
 export function createInvite(
-  ctx: { teamId: string; userId: string }, args: { role: UserRole; email?: string },
+  ctx: { teamId: string; userId: string }, args: { role: UserRole; email?: string; teamId?: string },
 ): { token: string } {
   const id = uid();
   const token = randomBytes(24).toString("hex");
+  const targetTeam = args.teamId || ctx.teamId;
   db.prepare(
     `insert into invites (id, team_id, token, email, role, created_by, created_at)
      values (?,?,?,?,?,?,?)`,
-  ).run(id, ctx.teamId, token, args.email?.trim() || null, args.role, ctx.userId, nowIso());
+  ).run(id, targetTeam, token, args.email?.trim() || null, args.role, ctx.userId, nowIso());
   return { token };
 }
 

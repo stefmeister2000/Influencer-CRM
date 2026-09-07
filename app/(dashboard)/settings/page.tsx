@@ -1,4 +1,4 @@
-import { requireSession, listInvites, getTeamName } from "@/lib/auth";
+import { requireSession, listInvites, getTeamName, listAllCompanies } from "@/lib/auth";
 import { listMembers } from "@/lib/services/lookups";
 import { getBusinessProfile, getKnowledge, getThemeColor } from "@/lib/services/business";
 import { PageHeader, StatCard } from "@/components/ui";
@@ -40,7 +40,13 @@ export default function SettingsPage() {
             </div>
           )}
           <RoleManager members={members as any} canEdit={can.manageRoles(ctx.role)} />
-          {isAdmin && <InviteManager invites={listInvites(ctx.teamId)} />}
+          {isAdmin && (
+            <InviteManager
+              invites={listInvites(ctx.teamId)}
+              companies={ctx.isPlatformAdmin ? listAllCompanies() : undefined}
+              currentTeamId={ctx.teamId}
+            />
+          )}
         </div>
       </section>
 

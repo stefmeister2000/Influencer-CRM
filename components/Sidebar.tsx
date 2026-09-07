@@ -14,9 +14,12 @@ const NAV = [
   { href: "/settings", label: "Settings", icon: "⚙" },
 ];
 
-export function Sidebar({ businessName }: { businessName: string }) {
+export function Sidebar({ businessName, isPlatformAdmin }: { businessName: string; isPlatformAdmin?: boolean }) {
   const path = usePathname();
   const initial = businessName.trim().charAt(0).toUpperCase() || "•";
+  const nav = isPlatformAdmin
+    ? [...NAV, { href: "/companies", label: "Companies", icon: "◈" }]
+    : NAV;
   return (
     <aside className="w-60 shrink-0 border-r border-slate-200 bg-white h-screen sticky top-0 hidden md:flex flex-col">
       <div className="px-5 py-4 flex items-center gap-2 border-b border-slate-100">
@@ -24,7 +27,7 @@ export function Sidebar({ businessName }: { businessName: string }) {
         <div className="font-semibold text-ink-900 truncate">{businessName}</div>
       </div>
       <nav className="p-2 flex-1 overflow-y-auto">
-        {NAV.map((item) => {
+        {nav.map((item) => {
           let active = path === item.href || path.startsWith(item.href + "/");
           // The "Discovery & campaigns" item covers both routes.
           if (item.href === "/campaigns" && path.startsWith("/discovery")) active = true;
