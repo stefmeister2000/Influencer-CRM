@@ -5,6 +5,7 @@ import { requireSession } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import {
   upsertInfluencer, updateInfluencer, setStatus, softDelete, restore, getInfluencer,
+  clearAllInfluencerData,
 } from "@/lib/services/influencers";
 import { getCampaign } from "@/lib/services/campaigns";
 import { addNote } from "@/lib/services/lookups";
@@ -129,6 +130,22 @@ export async function restoreInfluencerAction(id: string) {
   if (!can.delete(ctx.role)) throw new Error("Not allowed");
   restore(ctx, id);
   revalidatePath("/influencers");
+}
+
+/**
+ * Admin-only: permanently wipe every influencer (+ their messages, notes,
+ * timeline) for a genuine clean sheet. Campaigns are left in place.
+ */
+export async function clearAllInfluencersAction() {
+  const ctx = requireSession();
+  if (!can.manageTeam(ctx.role)) throw new Error("Only admins can clear all influencer data");
+  const result = clearAllInfluencerData(ctx);
+  revalidatePath("/influencers");
+  revalidatePath("/review");
+  revalidatePath("/send-queue");
+  revalidatePath("/pipeline");
+  revalidatePath("/dashboard");
+  return result;
 }
 
 export async function addNoteAction(influencerId: string, body: string) {

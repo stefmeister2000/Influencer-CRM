@@ -10,6 +10,7 @@ import { MyAccountPanel } from "@/components/MyAccountPanel";
 import { TeamNameForm } from "@/components/TeamNameForm";
 import { BrandColorForm } from "@/components/BrandColorForm";
 import { InviteManager } from "@/components/InviteManager";
+import { DangerZone } from "@/components/DangerZone";
 import { can } from "@/lib/permissions";
 import { aiConfigured } from "@/lib/ai/anthropic";
 
@@ -70,6 +71,13 @@ export default function SettingsPage() {
           <p>Discovery uses official APIs, approved providers, manual add and CSV only.</p>
         </div>
       </section>
+
+      {isAdmin && (
+        <section>
+          <h2 className="font-semibold mb-2">Danger zone</h2>
+          <DangerZone />
+        </section>
+      )}
     </div>
   );
 }

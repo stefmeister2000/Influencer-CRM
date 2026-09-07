@@ -1,4 +1,4 @@
-import { db, uid, nowIso, insertRow, updateRow } from "../db";
+import { db, tx, uid, nowIso, insertRow, updateRow } from "../db";
 import { mapInfluencer } from "../db/map";
 import type { FilterParams, Influencer, InfluencerStatus, OutreachStatus } from "../types";
 import type { NormalizedProfile } from "../providers/types";
@@ -198,6 +198,28 @@ export function listEvents(influencerId: string, limit = 40) {
   return db.prepare(
     "select * from outreach_events where influencer_id = ? order by created_at desc limit ?",
   ).all(influencerId, limit) as any[];
+}
+
+/**
+ * Hard-delete every influencer for this team, plus everything hanging off
+ * them (messages, notes, timeline events) — a genuine clean sheet, not a
+ * soft delete. Campaigns are left alone (they're search configs, not
+ * discovery results) so re-running discovery on them repopulates influencers.
+ */
+export function clearAllInfluencerData(ctx: Ctx): {
+  influencers: number; messages: number; notes: number; events: number;
+} {
+  return tx(() => {
+    const messages = Number(db.prepare("delete from messages where team_id = ?").run(ctx.teamId).changes);
+    const notes = Number(db.prepare("delete from notes where team_id = ?").run(ctx.teamId).changes);
+    const events = Number(db.prepare("delete from outreach_events where team_id = ?").run(ctx.teamId).changes);
+    const influencers = Number(db.prepare("delete from influencers where team_id = ?").run(ctx.teamId).changes);
+    logAudit({
+      teamId: ctx.teamId, actorId: ctx.userId, action: "influencers.clear_all",
+      entity: "influencers", after: { influencers, messages, notes, events },
+    });
+    return { influencers, messages, notes, events };
+  });
 }
 
 function stripEmpty<T extends Record<string, unknown>>(obj: T): Partial<T> {
