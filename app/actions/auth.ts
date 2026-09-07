@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { authenticate, createAccount, setSessionCookie, clearSessionCookie } from "@/lib/auth";
+import { authenticate, createAccount, setSessionCookie, clearSessionCookie, acceptInvite } from "@/lib/auth";
 
 export async function login(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -32,4 +32,18 @@ export async function signup(formData: FormData) {
 export async function logout() {
   clearSessionCookie();
   redirect("/login");
+}
+
+export async function acceptInviteAction(formData: FormData) {
+  const token = String(formData.get("token") ?? "");
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
+  const fullName = String(formData.get("full_name") ?? "");
+  try {
+    const { userId } = acceptInvite(token, { email, password, fullName });
+    setSessionCookie(userId);
+  } catch (e: any) {
+    redirect(`/invite/${token}?error=` + encodeURIComponent(e.message ?? "Failed to join"));
+  }
+  redirect("/dashboard");
 }

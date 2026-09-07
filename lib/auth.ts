@@ -120,3 +120,106 @@ export function authenticate(email: string, password: string): { userId: string 
 export function userCount(): number {
   return (db.prepare("select count(*) as n from users").get() as any).n;
 }
+
+// --- team identity -----------------------------------------------------------
+
+export function getTeamName(teamId: string): string {
+  const row = db.prepare("select name from teams where id = ?").get(teamId) as { name: string } | undefined;
+  return row?.name ?? "";
+}
+
+export function renameTeam(teamId: string, name: string) {
+  const clean = name.trim();
+  if (!clean) throw new Error("Company name can't be empty.");
+  db.prepare("update teams set name = ?, updated_at = ? where id = ?").run(clean, nowIso(), teamId);
+}
+
+// --- self-service profile edits ----------------------------------------------
+
+export function updateProfile(
+  userId: string, args: { fullName?: string; newPassword?: string },
+) {
+  if (args.newPassword) {
+    if (args.newPassword.length < 6) throw new Error("New password must be at least 6 characters.");
+    db.prepare("update users set full_name = ?, password_hash = ?, updated_at = ? where id = ?")
+      .run(args.fullName?.trim() || null, hashPassword(args.newPassword), nowIso(), userId);
+  } else {
+    db.prepare("update users set full_name = ?, updated_at = ? where id = ?")
+      .run(args.fullName?.trim() || null, nowIso(), userId);
+  }
+}
+
+// --- invites -------------------------------------------------------------------
+
+export interface Invite {
+  id: string; team_id: string; token: string; email: string | null;
+  role: UserRole; created_at: string; expires_at: string | null; accepted_at: string | null;
+}
+export interface InviteWithTeam extends Invite { team_name: string; }
+
+/** Generate a shareable invite link for this team. No email is sent — share the link yourself. */
+export function createInvite(
+  ctx: { teamId: string; userId: string }, args: { role: UserRole; email?: string },
+): { token: string } {
+  const id = uid();
+  const token = randomBytes(24).toString("hex");
+  db.prepare(
+    `insert into invites (id, team_id, token, email, role, created_by, created_at)
+     values (?,?,?,?,?,?,?)`,
+  ).run(id, ctx.teamId, token, args.email?.trim() || null, args.role, ctx.userId, nowIso());
+  return { token };
+}
+
+/** Pending (unaccepted) invites for a team, newest first. */
+export function listInvites(teamId: string): Invite[] {
+  return db.prepare(
+    `select id, team_id, token, email, role, created_at, expires_at, accepted_at
+     from invites where team_id = ? and accepted_at is null order by created_at desc`,
+  ).all(teamId) as Invite[];
+}
+
+export function revokeInvite(teamId: string, id: string) {
+  db.prepare("delete from invites where id = ? and team_id = ?").run(id, teamId);
+}
+
+export function getInviteByToken(token: string): InviteWithTeam | null {
+  const row = db.prepare(
+    `select i.id, i.team_id, i.token, i.email, i.role, i.created_at, i.expires_at, i.accepted_at,
+            t.name as team_name
+     from invites i join teams t on t.id = i.team_id where i.token = ?`,
+  ).get(token) as InviteWithTeam | undefined;
+  return row ?? null;
+}
+
+/** Validate an invite token and explain why it can't be used, if it can't. */
+export function inviteStatus(invite: InviteWithTeam | null): string | null {
+  if (!invite) return "This invite link is invalid.";
+  if (invite.accepted_at) return "This invite has already been used.";
+  if (invite.expires_at && new Date(invite.expires_at) < new Date()) return "This invite has expired.";
+  return null;
+}
+
+/** Accept an invite: creates a user under the invite's team at the invite's role. */
+export function acceptInvite(
+  token: string, args: { email: string; password: string; fullName?: string },
+): { userId: string } {
+  const invite = getInviteByToken(token);
+  const problem = inviteStatus(invite);
+  if (problem || !invite) throw new Error(problem ?? "This invite link is invalid.");
+  if (args.password.length < 6) throw new Error("Password must be at least 6 characters.");
+
+  const existing = db.prepare("select id from users where email = ?").get(args.email);
+  if (existing) throw new Error("An account with that email already exists.");
+
+  const userId = uid();
+  db.prepare(
+    `insert into users (id, team_id, email, full_name, role, password_hash, created_at, updated_at)
+     values (?,?,?,?,?,?,?,?)`,
+  ).run(userId, invite.team_id, args.email, args.fullName?.trim() || null, invite.role,
+        hashPassword(args.password), nowIso(), nowIso());
+
+  db.prepare("update invites set accepted_at = ?, accepted_by = ? where id = ?")
+    .run(nowIso(), userId, invite.id);
+
+  return { userId };
+}

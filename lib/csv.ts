@@ -74,8 +74,15 @@ export function toCsv(rows: Record<string, unknown>[], columns: string[]): strin
 }
 
 export const EXPORT_COLUMNS = [
-  "instagram_username", "platform", "full_name", "profile_url", "follower_count",
-  "engagement_rate", "country", "city", "language", "category", "email",
-  "whatsapp", "product_fit", "final_score", "status", "outreach_status",
-  "affiliate_status", "created_at",
+  "instagram_username", "platform", "full_name", "bio", "profile_url",
+  "follower_count", "following_count", "post_count", "avg_likes", "avg_comments",
+  "engagement_rate", "country", "city", "language", "category", "subcategory",
+  "gender_focus", "audience_type", "email", "whatsapp", "website",
+  "product_fit", "brand_fit_score", "engagement_score", "quality_score",
+  "risk_score", "final_score", "ai_recommendation", "ai_reasoning",
+  "status", "outreach_status", "affiliate_status", "source", "notes",
+  "created_at", "updated_at",
 ];
+
+/** UTF-8 BOM so Excel opens accented/non-Latin text correctly instead of mangling it. */
+export const CSV_BOM = "﻿";

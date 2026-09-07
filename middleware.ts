@@ -8,8 +8,9 @@ export function middleware(request: NextRequest) {
   const hasSession = Boolean(request.cookies.get(COOKIE)?.value);
   const path = request.nextUrl.pathname;
   const isAuthRoute = path.startsWith("/login");
+  const isInviteRoute = path.startsWith("/invite");
 
-  if (!hasSession && !isAuthRoute) {
+  if (!hasSession && !isAuthRoute && !isInviteRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

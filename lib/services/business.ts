@@ -2,6 +2,7 @@ import { getSetting, setSetting } from "./settings";
 
 export const BUSINESS_KEY = "business_profile";
 export const DISCOVERY_KNOWLEDGE_KEY = "discovery_knowledge";
+export const THEME_COLOR_KEY = "theme_color";
 
 export interface BusinessProfile {
   name: string;
@@ -39,6 +40,15 @@ export function getKnowledge(teamId: string): string {
 
 export function saveKnowledge(ctx: Ctx, text: string) {
   setSetting(ctx, DISCOVERY_KNOWLEDGE_KEY, { text });
+}
+
+/** Per-team brand color (hex). Null means "use the app default" — see lib/theme.ts. */
+export function getThemeColor(teamId: string): string | null {
+  return getSetting<{ hex: string }>(teamId, THEME_COLOR_KEY)?.hex ?? null;
+}
+
+export function saveThemeColor(ctx: Ctx, hex: string | null) {
+  setSetting(ctx, THEME_COLOR_KEY, { hex: hex || null });
 }
 
 /**

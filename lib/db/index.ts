@@ -50,6 +50,23 @@ create table if not exists users (
   created_at text not null, updated_at text not null
 );
 
+-- Shareable invite links (no email sending — an admin generates a link and
+-- shares it however they like). Unaccepted, unexpired invites let anyone with
+-- the link join THIS team at the assigned role.
+create table if not exists invites (
+  id text primary key,
+  team_id text not null references teams(id),
+  token text not null unique,
+  email text,
+  role text not null default 'outreach_assistant',
+  created_by text,
+  created_at text not null,
+  expires_at text,
+  accepted_at text,
+  accepted_by text
+);
+create index if not exists idx_invites_team on invites(team_id);
+
 create table if not exists campaigns (
   id text primary key,
   team_id text not null references teams(id),

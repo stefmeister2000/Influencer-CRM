@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { parseCsv, csvRowToProfile, toCsv, EXPORT_COLUMNS } from "@/lib/csv";
+import { parseCsv, csvRowToProfile, toCsv, EXPORT_COLUMNS, CSV_BOM } from "@/lib/csv";
 import { upsertInfluencer, listInfluencers } from "@/lib/services/influencers";
 import { recordImport } from "@/lib/services/lookups";
 import type { DuplicateStrategy } from "@/lib/services/duplicates";
@@ -44,7 +44,7 @@ export async function importCsvAction(
   return result;
 }
 
-export async function exportCsvAction(filters: FilterParams = {}): Promise<string> {
+export async function exportCsvAction(filters: FilterParams = {}): Promise<{ csv: string; count: number }> {
   const ctx = requireSession();
   let all: any[] = [];
   let page = 1;
@@ -56,5 +56,5 @@ export async function exportCsvAction(filters: FilterParams = {}): Promise<strin
     page++;
     if (page > 400) break;
   }
-  return toCsv(all, EXPORT_COLUMNS);
+  return { csv: CSV_BOM + toCsv(all, EXPORT_COLUMNS), count: all.length };
 }

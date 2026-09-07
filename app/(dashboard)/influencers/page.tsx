@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/ui";
 import { InfluencerFilters } from "@/components/InfluencerFilters";
 import { AddInfluencer } from "@/components/AddInfluencer";
 import { InfluencerTable } from "@/components/InfluencerTable";
+import { ExportButton } from "@/components/ExportButton";
 import { PAGE_SIZE } from "@/lib/constants";
 import type { FilterParams } from "@/lib/types";
 
@@ -57,7 +58,12 @@ export default function InfluencersPage({
   return (
     <div>
       <PageHeader title="Influencers" subtitle={`${count} in ${TABS.find((t) => t.value === view)?.label.toLowerCase()}`}
-        action={<AddInfluencer campaigns={campaigns} role={ctx.role} />} />
+        action={
+          <div className="flex items-center gap-2">
+            <ExportButton filters={filters} label="Export this view" />
+            <AddInfluencer campaigns={campaigns} role={ctx.role} />
+          </div>
+        } />
 
       {/* View tabs — approved influencers move out of "To review" so you can't double-approve */}
       <div className="flex gap-1 mb-3">

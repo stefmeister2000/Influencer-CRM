@@ -1,11 +1,15 @@
-import { requireSession } from "@/lib/auth";
+import { requireSession, listInvites, getTeamName } from "@/lib/auth";
 import { listMembers } from "@/lib/services/lookups";
-import { getBusinessProfile, getKnowledge } from "@/lib/services/business";
+import { getBusinessProfile, getKnowledge, getThemeColor } from "@/lib/services/business";
 import { PageHeader, StatCard } from "@/components/ui";
 import { RoleManager } from "@/components/RoleManager";
 import { ExportButton } from "@/components/ExportButton";
 import { BusinessProfilePanel } from "@/components/BusinessProfilePanel";
 import { DiscoveryKnowledgePanel } from "@/components/DiscoveryKnowledgePanel";
+import { MyAccountPanel } from "@/components/MyAccountPanel";
+import { TeamNameForm } from "@/components/TeamNameForm";
+import { BrandColorForm } from "@/components/BrandColorForm";
+import { InviteManager } from "@/components/InviteManager";
 import { can } from "@/lib/permissions";
 import { aiConfigured } from "@/lib/ai/anthropic";
 
@@ -14,17 +18,29 @@ export default function SettingsPage() {
   const members = listMembers(ctx.teamId);
   const business = getBusinessProfile(ctx.teamId);
   const knowledge = getKnowledge(ctx.teamId);
+  const isAdmin = can.manageTeam(ctx.role);
 
   return (
     <div className="space-y-5">
       <PageHeader title="Settings" subtitle="Your business, team, integrations & exports" />
 
+      <MyAccountPanel email={ctx.email} fullName={ctx.fullName} />
+
       <BusinessProfilePanel initial={business} />
       <DiscoveryKnowledgePanel initial={knowledge} />
 
       <section>
-        <h2 className="font-semibold mb-2">Team members &amp; roles</h2>
-        <RoleManager members={members as any} canEdit={can.manageRoles(ctx.role)} />
+        <h2 className="font-semibold mb-2">Team &amp; access</h2>
+        <div className="space-y-3">
+          {isAdmin && (
+            <div className="grid md:grid-cols-2 gap-3">
+              <TeamNameForm initial={getTeamName(ctx.teamId)} />
+              <BrandColorForm initial={getThemeColor(ctx.teamId)} />
+            </div>
+          )}
+          <RoleManager members={members as any} canEdit={can.manageRoles(ctx.role)} />
+          {isAdmin && <InviteManager invites={listInvites(ctx.teamId)} />}
+        </div>
       </section>
 
       <section>
