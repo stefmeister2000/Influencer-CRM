@@ -21,10 +21,10 @@ export class AiDiscoveryProvider implements ProfileProvider {
   private graph = new InstagramGraphProvider();
 
   async searchProfiles(
-    filters: DiscoveryFilters, limit = 40, businessContext?: string,
+    filters: DiscoveryFilters, limit = 20, businessContext?: string,
   ): Promise<NormalizedProfile[]> {
     if (!aiConfigured()) return [];
-    const want = Math.min(limit, 40);
+    const want = Math.min(limit, 25);
 
     const platforms = (filters.platforms?.length ? filters.platforms : ["instagram", "tiktok"])
       .map((p) => (p === "tiktok" ? "TikTok" : "Instagram"));
@@ -47,32 +47,26 @@ Be thorough — list as MANY qualifying real creators as you can find (aim for
 ${want}+). For EACH: platform (instagram or tiktok), @handle, name, city, niche,
 rough follower estimate, language, and a short reason they fit.`;
 
-    const runResearch = async (extra: string): Promise<string> => {
-      try {
-        const res = await anthropic().messages.create({
-          model: MODEL,
-          max_tokens: 8000,
-          system: researchSystem,
-          tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 6 } as any],
-          messages: [{ role: "user", content: this.briefFromFilters(filters, want) + extra }],
-        });
-        return this.extractText(res);
-      } catch {
-        return "";
-      }
-    };
-
-    // Two passes for breadth: a second pass explicitly asks for DIFFERENT creators.
-    const research1 = await runResearch("");
-    const research2 = await runResearch(
-      "\n\nThis is a SECOND pass — find as many ADDITIONAL different real creators " +
-      "as possible that a first pass would likely miss (smaller accounts, other " +
-      "cities, the other platform, adjacent niches). Avoid repeating obvious big names.",
-    );
-    const research = [research1, research2].filter(Boolean).join("\n\n---\n\n");
+    // Single research pass — a second pass roughly doubled wall-clock time
+    // (was the main reason a run could sit at "Running…" for minutes) for
+    // marginal extra breadth. Re-running discovery on the same campaign
+    // naturally finds different people since already-seen ones are excluded.
+    let research: string;
+    try {
+      const res = await anthropic().messages.create({
+        model: MODEL,
+        max_tokens: 4000,
+        system: researchSystem,
+        tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 4 } as any],
+        messages: [{ role: "user", content: this.briefFromFilters(filters, want) }],
+      });
+      research = this.extractText(res);
+    } catch {
+      research = "";
+    }
     if (!research || !/@?\w/.test(research)) return [];
 
-    // --- Structure the combined research into clean JSON ---
+    // --- Structure the research into clean JSON ---
     let parsed: { creators?: any[] };
     try {
       parsed = await askJSON<{ creators: any[] }>({
@@ -85,7 +79,7 @@ rough follower estimate, language, and a short reason they fit.`;
           `estimated_followers is a number (convert "25k" to 25000). ` +
           `Omit anyone without a handle. Include as many as are present.`,
         user: research,
-        maxTokens: 8000,
+        maxTokens: 4000,
       });
     } catch {
       return [];

@@ -15,7 +15,7 @@ export interface DiscoveryRunResult { found: number; inserted: number; skipped: 
  * rows appear only with an approved provider configured, or via manual/CSV.
  */
 export async function runDiscovery(
-  ctx: Ctx, campaign: Campaign, limit = 50,
+  ctx: Ctx, campaign: Campaign, limit = 20,
 ): Promise<DiscoveryRunResult> {
   const filters = campaign.parsed_filters as DiscoveryFilters | null;
   if (!filters) return { found: 0, inserted: 0, skipped: 0 };
@@ -24,10 +24,18 @@ export async function runDiscovery(
   const provider = getProvider();
   const raw = await provider.searchProfiles(filters, limit, businessContext);
 
-  let inserted = 0, skipped = 0;
-  for (const r of raw) {
+  // Score every candidate concurrently — each is an independent AI call, and
+  // scoring them one at a time in a sequential loop was the main reason a run
+  // could sit at "Running…" for minutes on a full batch. Cap concurrency so a
+  // big batch doesn't blow through the API's rate limit.
+  const scored = await mapWithConcurrency(raw, 6, async (r) => {
     const profile = normalizeProfileData(r);
     const score = await scoreInfluencer(profile, filters, businessContext);
+    return { profile, score };
+  });
+
+  let inserted = 0, skipped = 0;
+  for (const { profile, score } of scored) {
     const { outcome } = upsertInfluencer(ctx, {
       ...profile,
       product_fit: score.product_fit,
@@ -50,4 +58,20 @@ export async function runDiscovery(
   }
 
   return { found: raw.length, inserted, skipped };
+}
+
+/** Run `fn` over `items` with at most `concurrency` in flight at once. */
+async function mapWithConcurrency<T, R>(
+  items: T[], concurrency: number, fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i]);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker));
+  return results;
 }
