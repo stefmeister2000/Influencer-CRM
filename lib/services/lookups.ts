@@ -42,3 +42,23 @@ export function updateRole(ctx: Ctx, targetUserId: string, role: string) {
   db.prepare("update users set role = ?, updated_at = ? where id = ? and team_id = ?")
     .run(role, nowIso(), targetUserId, ctx.teamId);
 }
+
+/**
+ * Remove a teammate from this company. Can't remove yourself (use "Sign out"),
+ * and can't remove the last remaining admin — that would leave the company
+ * with nobody able to manage it. Their past notes/messages/imports stay
+ * attributed to them (created_by is just a label, not a foreign key).
+ */
+export function removeMember(ctx: Ctx, targetUserId: string) {
+  if (targetUserId === ctx.userId) throw new Error("You can't remove yourself.");
+  const target = db.prepare("select role from users where id = ? and team_id = ?")
+    .get(targetUserId, ctx.teamId) as { role: string } | undefined;
+  if (!target) throw new Error("That person isn't on this team.");
+  if (target.role === "admin") {
+    const adminCount = (db.prepare(
+      "select count(*) as n from users where team_id = ? and role = 'admin'",
+    ).get(ctx.teamId) as any).n;
+    if (adminCount <= 1) throw new Error("Can't remove the only admin — make someone else admin first.");
+  }
+  db.prepare("delete from users where id = ? and team_id = ?").run(targetUserId, ctx.teamId);
+}

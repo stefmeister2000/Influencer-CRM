@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-import { updateRole } from "@/lib/services/lookups";
+import { updateRole, removeMember } from "@/lib/services/lookups";
 import { saveThemeColor } from "@/lib/services/business";
 import { isValidHexColor } from "@/lib/theme";
 import {
@@ -43,6 +43,18 @@ export async function createInviteAction(
   });
   revalidatePath("/settings");
   return { token };
+}
+
+/** Admin-only: remove a teammate from this company. Can't remove yourself or the only admin. */
+export async function removeMemberAction(targetUserId: string) {
+  const ctx = requireSession();
+  if (!can.manageRoles(ctx.role)) throw new Error("Only admins can remove teammates");
+  removeMember(ctx, targetUserId);
+  logAudit({
+    teamId: ctx.teamId, actorId: ctx.userId, action: "profile.member_removed",
+    entity: "users", entityId: targetUserId,
+  });
+  revalidatePath("/settings");
 }
 
 export async function revokeInviteAction(id: string) {

@@ -39,7 +39,7 @@ export default function SettingsPage() {
               <BrandColorForm initial={getThemeColor(ctx.teamId)} />
             </div>
           )}
-          <RoleManager members={members as any} canEdit={can.manageRoles(ctx.role)} />
+          <RoleManager members={members as any} canEdit={can.manageRoles(ctx.role)} currentUserId={ctx.userId} />
           {isAdmin && (
             <InviteManager
               invites={listInvites(ctx.teamId)}

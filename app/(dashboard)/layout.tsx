@@ -1,4 +1,4 @@
-import { requireSession } from "@/lib/auth";
+import { requireSession, getTeamName } from "@/lib/auth";
 import { Sidebar } from "@/components/Sidebar";
 import { Topbar } from "@/components/Topbar";
 import { getBusinessProfile, getThemeColor } from "@/lib/services/business";
@@ -6,7 +6,12 @@ import { brandCssVars } from "@/lib/theme";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = requireSession();
-  const businessName = getBusinessProfile(session.teamId).name?.trim() || "Influencer CRM";
+  // A team's own company name is a better fallback than the generic app name —
+  // a brand-new company with no business profile yet should still show its own
+  // name everywhere (sidebar, topbar), not "Influencer CRM".
+  const businessName = getBusinessProfile(session.teamId).name?.trim()
+    || getTeamName(session.teamId).trim()
+    || "Influencer CRM";
   const themeColor = getThemeColor(session.teamId);
 
   return (
