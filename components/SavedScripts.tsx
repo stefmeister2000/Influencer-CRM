@@ -10,10 +10,24 @@ import { formatDate } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
 import { can } from "@/lib/permissions";
 
-const STATUSES: { value: ScriptStatus; label: string; color: string }[] = [
-  { value: "draft", label: "Draft", color: "bg-slate-100 text-slate-700" },
-  { value: "in_progress", label: "In progress", color: "bg-amber-100 text-amber-800" },
-  { value: "video_made", label: "Video made", color: "bg-emerald-100 text-emerald-800" },
+const STATUSES: {
+  value: ScriptStatus; label: string; color: string; chipActive: string; chipIdle: string;
+}[] = [
+  {
+    value: "draft", label: "Draft", color: "bg-slate-100 text-slate-700",
+    chipActive: "bg-slate-600 text-white border-slate-600",
+    chipIdle: "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100",
+  },
+  {
+    value: "in_progress", label: "In progress", color: "bg-amber-100 text-amber-800",
+    chipActive: "bg-amber-500 text-white border-amber-500",
+    chipIdle: "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100",
+  },
+  {
+    value: "video_made", label: "Video made", color: "bg-emerald-100 text-emerald-800",
+    chipActive: "bg-emerald-600 text-white border-emerald-600",
+    chipIdle: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100",
+  },
 ];
 
 const topicLabel = (v: string) => {
@@ -32,7 +46,8 @@ export function SavedScripts({ scripts, role }: { scripts: ContentScript[]; role
         <div className="flex gap-1">
           <Chip active={filter === "all"} onClick={() => setFilter("all")}>All</Chip>
           {STATUSES.map((s) => (
-            <Chip key={s.value} active={filter === s.value} onClick={() => setFilter(s.value)}>
+            <Chip key={s.value} active={filter === s.value} onClick={() => setFilter(s.value)}
+              activeClass={s.chipActive} idleClass={s.chipIdle}>
               {s.label}
             </Chip>
           ))}
@@ -150,13 +165,16 @@ function StatusPill({ status }: { status: ScriptStatus }) {
   return <span className={"badge " + s.color}>{s.label}</span>;
 }
 
-function Chip({ active, onClick, children }: {
+function Chip({ active, onClick, children, activeClass, idleClass }: {
   active: boolean; onClick: () => void; children: React.ReactNode;
+  activeClass?: string; idleClass?: string;
 }) {
+  const defaultActive = "bg-brand-600 text-white border-brand-600";
+  const defaultIdle = "bg-white text-ink-600 border-slate-200 hover:bg-slate-50";
   return (
     <button onClick={onClick}
       className={"text-xs px-2.5 py-1 rounded-full border transition " +
-        (active ? "bg-brand-600 text-white border-brand-600" : "bg-white text-ink-600 border-slate-200 hover:bg-slate-50")}>
+        (active ? (activeClass ?? defaultActive) : (idleClass ?? defaultIdle))}>
       {children}
     </button>
   );

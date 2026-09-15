@@ -32,7 +32,12 @@ export function RowActions({ influencer, role }: { influencer: Influencer; role:
       </button>
       {influencer.status !== "rejected" && (
         <button title="Reject" className="btn-ghost px-2 py-1 text-xs text-amber-700" disabled={pending || !writable}
-          onClick={() => start(async () => { await setStatusAction(influencer.id, { status: "rejected" }); })}>
+          onClick={() => start(async () => {
+            const input = window.prompt("Optional: why isn't this creator a fit? Helps the AI learn what to avoid.");
+            if (input === null) return; // cancelled — leave status untouched
+            await setStatusAction(influencer.id, { status: "rejected", reason: input.trim() || undefined });
+            router.refresh();
+          })}>
           ✕
         </button>
       )}

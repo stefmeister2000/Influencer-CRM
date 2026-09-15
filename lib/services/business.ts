@@ -1,4 +1,5 @@
 import { getSetting, setSetting } from "./settings";
+import { db } from "../db";
 
 export const BUSINESS_KEY = "business_profile";
 export const DISCOVERY_KNOWLEDGE_KEY = "discovery_knowledge";
@@ -52,6 +53,20 @@ export function saveThemeColor(ctx: Ctx, hex: string | null) {
 }
 
 /**
+ * Recent, explained creator declines — a human explicitly said why a creator
+ * wasn't a fit. Feeds into getBusinessContext so discovery/scoring learn to
+ * avoid recommending or scoring highly similar profiles in the future.
+ */
+export function getRecentDeclineReasons(teamId: string, limit = 15): string[] {
+  const rows = db.prepare(
+    `select detail from outreach_events
+     where team_id = ? and type = 'declined_with_reason' and detail is not null and trim(detail) != ''
+     order by created_at desc limit ?`,
+  ).all(teamId, limit) as { detail: string }[];
+  return rows.map((r) => r.detail.trim());
+}
+
+/**
  * A plain-text description of the business, injected into every AI prompt
  * (discovery, scoring, message generation) so outreach and targeting stay
  * locked to THIS business and niche.
@@ -62,6 +77,7 @@ export function getBusinessContext(teamId: string): string {
   if (!p.name && !p.description && !p.website) {
     return "No business profile is set yet. Write safe, generic, professional content and do not invent specific claims, products, or offers.";
   }
+  const declineReasons = getRecentDeclineReasons(teamId);
   return [
     `BUSINESS: ${p.name || "(unnamed)"}`,
     p.website ? `Website: ${p.website}` : "",
@@ -71,6 +87,9 @@ export function getBusinessContext(teamId: string): string {
     p.offer ? `Partnership / affiliate offer: ${p.offer}` : "",
     p.voice ? `Voice / tone: ${p.voice}` : "Voice / tone: premium, human, concise, trustworthy, non-salesy.",
     knowledge.trim() ? `Additional knowledge (niche, past learnings, specifics to favor):\n${knowledge.trim()}` : "",
+    declineReasons.length
+      ? `Creators this team has declined before, and why (avoid recommending or scoring highly similar profiles):\n${declineReasons.map((r) => `- ${r}`).join("\n")}`
+      : "",
     "Use ONLY these facts. Do not invent products, claims, medical statements, guarantees, or offers not listed here.",
   ].filter(Boolean).join("\n");
 }

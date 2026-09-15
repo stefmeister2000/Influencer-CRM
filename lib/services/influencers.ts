@@ -166,12 +166,21 @@ export function updateInfluencer(ctx: Ctx, id: string, patch: Partial<Influencer
 export function setStatus(
   ctx: Ctx, id: string,
   patch: { status?: InfluencerStatus; outreach_status?: OutreachStatus },
+  reason?: string,
 ) {
   const updated = updateInfluencer(ctx, id, patch);
   logEvent({
     teamId: ctx.teamId, influencerId: id, actorId: ctx.userId, type: "status_changed",
     detail: `Status → ${patch.status ?? ""} ${patch.outreach_status ?? ""}`.trim(),
   });
+  // Logged separately (not folded into the line above) so getRecentDeclineReasons
+  // can query just these without parsing free-form status-change text.
+  if (reason?.trim() && (patch.status === "rejected" || patch.status === "not_interested")) {
+    logEvent({
+      teamId: ctx.teamId, influencerId: id, actorId: ctx.userId, type: "declined_with_reason",
+      detail: reason.trim(),
+    });
+  }
   return updated;
 }
 

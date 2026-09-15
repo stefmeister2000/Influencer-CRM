@@ -107,11 +107,13 @@ export async function approveAndQueueAction(id: string) {
 }
 
 export async function setStatusAction(
-  id: string, patch: { status?: InfluencerStatus; outreach_status?: OutreachStatus },
+  id: string,
+  patch: { status?: InfluencerStatus; outreach_status?: OutreachStatus; reason?: string },
 ) {
   const ctx = requireSession();
   if (!can.updateStatus(ctx.role)) throw new Error("Not allowed");
-  setStatus(ctx, id, patch);
+  const { reason, ...statusPatch } = patch;
+  setStatus(ctx, id, statusPatch, reason);
   revalidatePath("/influencers");
   revalidatePath("/review");
   revalidatePath("/pipeline");
