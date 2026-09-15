@@ -5,6 +5,7 @@ import { countByCampaign } from "@/lib/services/influencers";
 import { PageHeader, StatCard } from "@/components/ui";
 import { titleCase } from "@/lib/utils";
 import { RunDiscoveryButton } from "@/components/RunDiscoveryButton";
+import { CampaignEditor } from "@/components/CampaignEditor";
 import type { DiscoveryFilters } from "@/lib/types";
 
 export default function CampaignDetail({ params }: { params: { id: string } }) {
@@ -29,40 +30,7 @@ export default function CampaignDetail({ params }: { params: { id: string } }) {
         <StatCard label="Goal" value={campaign.outreach_goal ?? "—"} />
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="card p-5">
-          <h2 className="font-semibold mb-2">Search prompt</h2>
-          <p className="text-sm text-ink-700 whitespace-pre-wrap">{campaign.search_prompt ?? "—"}</p>
-          {campaign.brand_voice && (
-            <>
-              <h3 className="font-medium mt-4 mb-1 text-sm">Brand voice</h3>
-              <p className="text-sm text-ink-700">{campaign.brand_voice}</p>
-            </>
-          )}
-        </div>
-        <div className="card p-5">
-          <h2 className="font-semibold mb-2">Parsed filters</h2>
-          {filters ? (
-            <dl className="text-sm space-y-1">
-              <Row k="Cities" v={filters.cities?.join(", ")} />
-              <Row k="Categories" v={filters.categories?.join(", ")} />
-              <Row k="Followers" v={`${filters.follower_min}–${filters.follower_max}`} />
-              <Row k="Languages" v={filters.languages?.join(", ")} />
-              <Row k="Exclude" v={(filters.exclude ?? filters.excluded_niches)?.join(", ")} />
-              <Row k="Message angle" v={filters.message_angle} />
-            </dl>
-          ) : <p className="text-sm text-ink-500">No parsed filters.</p>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Row({ k, v }: { k: string; v?: string }) {
-  return (
-    <div className="flex gap-2">
-      <dt className="text-ink-500 w-28 shrink-0">{k}</dt>
-      <dd className="text-ink-800">{v || "—"}</dd>
+      <CampaignEditor campaign={campaign} filters={filters} />
     </div>
   );
 }

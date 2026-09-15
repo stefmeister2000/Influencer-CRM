@@ -82,5 +82,23 @@ export async function updateCampaignStatusAction(id: string, status: string) {
   revalidatePath("/campaigns");
 }
 
+/**
+ * Fix a campaign's brief or search filters after the fact — e.g. the wrong
+ * follower range or platform got parsed, or you want to narrow/widen it
+ * before (or after) running discovery. Only affects future discovery runs;
+ * influencers already found aren't retroactively changed.
+ */
+export async function updateCampaignAction(id: string, patch: {
+  name?: string; search_prompt?: string | null; product_focus?: string | null;
+  country?: string | null; city?: string | null; parsed_filters?: DiscoveryFilters;
+}) {
+  const ctx = requireSession();
+  if (!can.createCampaign(ctx.role)) throw new Error("Not allowed");
+  if (!patch.name?.trim()) throw new Error("Campaign name can't be empty.");
+  updateCampaign(ctx, id, patch);
+  revalidatePath(`/campaigns/${id}`);
+  revalidatePath("/campaigns");
+}
+
 const str = (f: FormData, k: string) => { const v = f.get(k); return v ? String(v) : null; };
 const num = (f: FormData, k: string) => { const v = f.get(k); return v ? Number(v) : null; };
