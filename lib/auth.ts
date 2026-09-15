@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { scryptSync, randomBytes, timingSafeEqual, createHmac } from "node:crypto";
-import { db, uid, nowIso, seedTeam } from "./db";
+import { db, uid, nowIso, seedTeam, tx } from "./db";
 import type { UserRole } from "./types";
 
 const COOKIE = "orvion_session";
@@ -199,6 +199,36 @@ export function createCompany(name: string): { teamId: string } {
     .run(teamId, clean, nowIso(), nowIso());
   seedTeam(teamId);
   return { teamId };
+}
+
+/**
+ * Platform-admin only: permanently delete a company and every row scoped to
+ * it (members, influencers, messages, campaigns, everything). Irreversible —
+ * enforced by the action layer requiring the caller to type the company name.
+ */
+export function deleteCompany(teamId: string): void {
+  const team = db.prepare("select id from teams where id = ?").get(teamId) as { id: string } | undefined;
+  if (!team) throw new Error("Company not found.");
+
+  tx(() => {
+    db.prepare(
+      `delete from influencer_categories where influencer_id in (select id from influencers where team_id = ?)`,
+    ).run(teamId);
+    db.prepare(
+      `delete from influencer_tags where influencer_id in (select id from influencers where team_id = ?)`,
+    ).run(teamId);
+    // Order matters: influencers before campaigns, everyone before teams —
+    // foreign_keys is ON, so a child row must go before the parent it points to.
+    const teamScopedTables = [
+      "messages", "outreach_events", "notes", "imports", "affiliate_partners",
+      "influencers", "campaigns", "prompt_templates", "content_scripts",
+      "categories", "locations", "tags", "invites", "settings", "audit_logs", "users",
+    ];
+    for (const table of teamScopedTables) {
+      db.prepare(`delete from ${table} where team_id = ?`).run(teamId);
+    }
+    db.prepare("delete from teams where id = ?").run(teamId);
+  });
 }
 
 // --- self-service profile edits ----------------------------------------------

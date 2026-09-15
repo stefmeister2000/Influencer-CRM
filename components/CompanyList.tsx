@@ -2,11 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createCompanyAction, switchCompanyAction, renameTeamAction } from "@/app/actions/team";
+import { createCompanyAction, switchCompanyAction, renameTeamAction, deleteCompanyAction } from "@/app/actions/team";
 import type { CompanySummary } from "@/lib/auth";
 import { formatDate } from "@/lib/utils";
 
-export function CompanyList({ companies, currentTeamId }: { companies: CompanySummary[]; currentTeamId: string }) {
+export function CompanyList({
+  companies, currentTeamId, homeTeamId,
+}: { companies: CompanySummary[]; currentTeamId: string; homeTeamId: string }) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -63,6 +65,7 @@ export function CompanyList({ companies, currentTeamId }: { companies: CompanySu
           <tbody className="divide-y divide-slate-100">
             {companies.map((c) => {
               const isCurrent = c.id === currentTeamId;
+              const isHome = c.id === homeTeamId;
               return (
                 <tr key={c.id} className={isCurrent ? "bg-brand-50/50" : ""}>
                   <td className="px-4 py-2.5 font-medium text-ink-900">
@@ -72,11 +75,14 @@ export function CompanyList({ companies, currentTeamId }: { companies: CompanySu
                   <td className="px-4 py-2.5 text-ink-600">{c.influencer_count}</td>
                   <td className="px-4 py-2.5 text-ink-500">{formatDate(c.created_at)}</td>
                   <td className="px-4 py-2.5 text-right">
-                    {!isCurrent && (
-                      <button className="btn-ghost py-1 text-xs" disabled={pending} onClick={() => switchTo(c.id)}>
-                        Switch to this company
-                      </button>
-                    )}
+                    <div className="flex items-center justify-end gap-3">
+                      {!isCurrent && (
+                        <button className="btn-ghost py-1 text-xs" disabled={pending} onClick={() => switchTo(c.id)}>
+                          Switch to this company
+                        </button>
+                      )}
+                      {!isHome && <DeleteCompanyButton id={c.id} name={c.name} />}
+                    </div>
                   </td>
                 </tr>
               );
@@ -138,6 +144,75 @@ function CompanyNameCell({ id, name, isCurrent }: { id: string; name: string; is
         onClick={() => { setEditing(false); setValue(name); }}>
         Cancel
       </button>
+    </span>
+  );
+}
+
+/**
+ * Permanently deletes a company and everything in it. Requires typing the
+ * exact company name to confirm — a click alone can't wipe out real data.
+ */
+function DeleteCompanyButton({ id, name }: { id: string; name: string }) {
+  const [open, setOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const router = useRouter();
+
+  const canConfirm = confirmText.trim() === name;
+
+  function close() {
+    setOpen(false);
+    setConfirmText("");
+    setError(null);
+  }
+
+  function del() {
+    if (!canConfirm) return;
+    setError(null);
+    start(async () => {
+      try {
+        await deleteCompanyAction(id, confirmText.trim());
+        close();
+        router.refresh();
+      } catch (e: any) {
+        setError(e?.message ?? "Failed to delete company");
+      }
+    });
+  }
+
+  if (!open) {
+    return (
+      <button type="button" className="text-xs text-red-500 hover:text-red-700 underline"
+        onClick={() => setOpen(true)}>
+        Delete
+      </button>
+    );
+  }
+
+  return (
+    <span className="inline-flex flex-col items-end gap-1">
+      <span className="inline-flex items-center gap-1.5">
+        <input
+          autoFocus
+          className="input py-1 text-sm w-44"
+          placeholder={`Type "${name}"`}
+          value={confirmText}
+          disabled={pending}
+          onChange={(e) => setConfirmText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") del();
+            if (e.key === "Escape") close();
+          }}
+        />
+        <button className="btn-danger py-1 px-2 text-xs" disabled={!canConfirm || pending} onClick={del}>
+          {pending ? "…" : "Delete"}
+        </button>
+        <button className="btn-ghost py-1 px-2 text-xs" disabled={pending} onClick={close}>
+          Cancel
+        </button>
+      </span>
+      {error && <span className="text-xs text-red-600">{error}</span>}
     </span>
   );
 }

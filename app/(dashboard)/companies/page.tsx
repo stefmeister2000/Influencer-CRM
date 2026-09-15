@@ -15,7 +15,7 @@ export default function CompaniesPage() {
         title="Companies"
         subtitle="Every company running on this software. Create a new one, or switch into an existing one to manage it."
       />
-      <CompanyList companies={companies} currentTeamId={ctx.teamId} />
+      <CompanyList companies={companies} currentTeamId={ctx.teamId} homeTeamId={ctx.homeTeamId} />
     </div>
   );
 }

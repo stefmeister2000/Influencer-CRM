@@ -8,7 +8,8 @@ import { saveThemeColor } from "@/lib/services/business";
 import { isValidHexColor } from "@/lib/theme";
 import {
   createInvite, revokeInvite, renameTeam, updateProfile,
-  setActiveTeam, listAllCompanies, createCompany, type CompanySummary,
+  setActiveTeam, listAllCompanies, createCompany, deleteCompany, getTeamName,
+  type CompanySummary,
 } from "@/lib/auth";
 import { logAudit } from "@/lib/services/audit";
 import type { UserRole } from "@/lib/types";
@@ -113,5 +114,28 @@ export async function switchCompanyAction(teamId: string | null) {
   const ctx = requireSession();
   if (!ctx.isPlatformAdmin) throw new Error("Not allowed");
   setActiveTeam(teamId);
+  revalidatePath("/", "layout");
+}
+
+/**
+ * Platform-admin only: permanently delete a company and everything in it.
+ * `expectedName` must match the company's current name exactly, so a misclick
+ * on the wrong row can't wipe out real data. Can't delete your own company.
+ */
+export async function deleteCompanyAction(teamId: string, expectedName: string) {
+  const ctx = requireSession();
+  if (!ctx.isPlatformAdmin) throw new Error("Not allowed");
+  if (teamId === ctx.homeTeamId) throw new Error("You can't delete your own company.");
+
+  const name = getTeamName(teamId);
+  if (!name || expectedName.trim() !== name) throw new Error("That didn't match the company name — nothing was deleted.");
+
+  deleteCompany(teamId);
+  logAudit({
+    teamId: ctx.homeTeamId, actorId: ctx.userId, action: "company.deleted",
+    entity: "teams", entityId: teamId, before: { name },
+  });
+  if (ctx.teamId === teamId) setActiveTeam(null); // was viewing the company just deleted — snap back home
+  revalidatePath("/companies");
   revalidatePath("/", "layout");
 }
