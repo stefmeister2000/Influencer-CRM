@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { saveBusinessProfileAction } from "@/app/actions/business";
+import { saveBusinessProfileAction, scanWebsiteAction } from "@/app/actions/business";
 import type { BusinessProfile } from "@/lib/services/business";
 
 export function BusinessProfilePanel({ initial }: { initial: BusinessProfile }) {
@@ -29,7 +29,10 @@ export function BusinessProfilePanel({ initial }: { initial: BusinessProfile }) 
         className="space-y-3">
         <div className="grid md:grid-cols-2 gap-3">
           <Field name="name" label="Business name *" value={initial.name} placeholder="e.g. Acme Skincare" required />
-          <Field name="website" label="Website" value={initial.website} placeholder="https://…" />
+          <div>
+            <Field name="website" label="Website" value={initial.website} placeholder="https://…" />
+            <ScanWebsiteButton website={initial.website} />
+          </div>
           <Field name="instagram" label="Instagram" value={initial.instagram} placeholder="@yourbrand" />
           <Field name="location" label="Target market / location" value={initial.location} placeholder="e.g. UAE, or Global / US" />
         </div>
@@ -50,6 +53,42 @@ export function BusinessProfilePanel({ initial }: { initial: BusinessProfile }) 
           {saved && <span className="text-sm text-emerald-700">Saved ✓ — discovery, scoring and messages now target this business.</span>}
         </div>
       </form>
+    </div>
+  );
+}
+
+/**
+ * One-time AI research pass over the SAVED website (not whatever's currently
+ * typed but unsaved above) — appends findings to the knowledge base below.
+ */
+function ScanWebsiteButton({ website }: { website: string }) {
+  const [pending, start] = useTransition();
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  function scan() {
+    setError(null);
+    setDone(false);
+    start(async () => {
+      try {
+        await scanWebsiteAction();
+        setDone(true);
+        router.refresh();
+      } catch (e: any) {
+        setError(e?.message ?? "Failed to scan website");
+      }
+    });
+  }
+
+  return (
+    <div className="mt-1.5">
+      <button type="button" className="btn-ghost py-1 text-xs" disabled={pending || !website.trim()} onClick={scan}>
+        {pending ? "Scanning…" : "Scan website → add to knowledge base"}
+      </button>
+      {!website.trim() && <p className="text-xs text-ink-400 mt-1">Save a website above first.</p>}
+      {done && <p className="text-xs text-emerald-700 mt-1">Added to knowledge base below ✓</p>}
+      {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
     </div>
   );
 }

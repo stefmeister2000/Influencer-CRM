@@ -328,12 +328,17 @@ function runMigrations(db: DB) {
   `);
 
   // Guard against the "earliest signup" heuristic above having picked an
-  // orphaned/test account instead: the known O'Learys owner account always
-  // gets platform admin too. Safe to run on every boot — no-op once set.
-  db.exec(`
-    update users set is_platform_admin = 1
-    where lower(email) = 'marketing@olearys.be' and is_platform_admin = 0
-  `);
+  // orphaned/test account instead: known account owners always get platform
+  // admin too, so they can create companies, switch between them (e.g.
+  // O'Learys <-> E-Kart) and invite into any of them. Safe to run on every
+  // boot — no-op once each is already set. is_platform_admin isn't
+  // exclusive to one person; any number of accounts can hold it.
+  const KNOWN_PLATFORM_ADMINS = ["marketing@olearys.be", "giel@olearys.be"];
+  for (const email of KNOWN_PLATFORM_ADMINS) {
+    db.prepare(
+      "update users set is_platform_admin = 1 where lower(email) = ? and is_platform_admin = 0",
+    ).run(email);
+  }
 }
 
 function ensureColumn(db: DB, table: string, column: string, ddl: string) {

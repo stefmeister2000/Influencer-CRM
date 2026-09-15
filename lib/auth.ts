@@ -233,16 +233,29 @@ export function deleteCompany(teamId: string): void {
 
 // --- self-service profile edits ----------------------------------------------
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export function updateProfile(
-  userId: string, args: { fullName?: string; newPassword?: string },
+  userId: string, args: { fullName?: string; newPassword?: string; email?: string },
 ) {
+  let email: string | null = null;
+  if (args.email !== undefined) {
+    const clean = args.email.trim().toLowerCase();
+    if (!EMAIL_RE.test(clean)) throw new Error("Enter a valid email address.");
+    const existing = db.prepare("select id from users where email = ? and id != ?").get(clean, userId);
+    if (existing) throw new Error("Another account already uses that email.");
+    email = clean;
+  }
+
   if (args.newPassword) {
     if (args.newPassword.length < 6) throw new Error("New password must be at least 6 characters.");
-    db.prepare("update users set full_name = ?, password_hash = ?, updated_at = ? where id = ?")
-      .run(args.fullName?.trim() || null, hashPassword(args.newPassword), nowIso(), userId);
+    db.prepare(
+      "update users set full_name = ?, email = coalesce(?, email), password_hash = ?, updated_at = ? where id = ?",
+    ).run(args.fullName?.trim() || null, email, hashPassword(args.newPassword), nowIso(), userId);
   } else {
-    db.prepare("update users set full_name = ?, updated_at = ? where id = ?")
-      .run(args.fullName?.trim() || null, nowIso(), userId);
+    db.prepare(
+      "update users set full_name = ?, email = coalesce(?, email), updated_at = ? where id = ?",
+    ).run(args.fullName?.trim() || null, email, nowIso(), userId);
   }
 }
 

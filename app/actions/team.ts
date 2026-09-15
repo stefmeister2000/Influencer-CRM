@@ -80,12 +80,13 @@ export async function renameTeamAction(name: string, teamId?: string) {
   revalidatePath("/companies");
 }
 
-/** Any signed-in user can update their own display name and, optionally, their password. */
+/** Any signed-in user can update their own display name, email and, optionally, their password. */
 export async function updateProfileAction(formData: FormData) {
   const ctx = requireSession();
   const fullName = String(formData.get("full_name") ?? "");
   const newPassword = String(formData.get("new_password") ?? "");
-  updateProfile(ctx.userId, { fullName, newPassword: newPassword || undefined });
+  const email = String(formData.get("email") ?? "");
+  updateProfile(ctx.userId, { fullName, newPassword: newPassword || undefined, email: email || undefined });
   revalidatePath("/settings");
 }
 

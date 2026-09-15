@@ -28,7 +28,10 @@ export default function SettingsPage() {
       <MyAccountPanel email={ctx.email} fullName={ctx.fullName} />
 
       <BusinessProfilePanel initial={business} />
-      <DiscoveryKnowledgePanel initial={knowledge} />
+      {/* Keyed on content so an update from elsewhere (e.g. the website scan
+          on the Business profile above) forces a remount and shows the fresh
+          text — this panel otherwise keeps its own local edit state. */}
+      <DiscoveryKnowledgePanel initial={knowledge} key={knowledge} />
 
       <section>
         <h2 className="font-semibold mb-2">Team &amp; access</h2>
