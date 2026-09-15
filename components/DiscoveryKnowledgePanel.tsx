@@ -27,8 +27,15 @@ export function DiscoveryKnowledgePanel({ initial }: { initial: string }) {
           <p className="text-sm text-ink-500">
             Keep adding notes — niche specifics, creator types that convert, things to avoid.
             Feeds discovery, scoring and message generation alongside your business profile.
-            {initial ? "" : " (empty — add some)"}
+            {text ? "" : " (empty — add some)"}
           </p>
+          {/* Always-visible preview of what's actually saved, so you don't have to
+              open the editor just to check it's there. */}
+          {!open && text && (
+            <p className="text-sm text-ink-700 mt-2 whitespace-pre-wrap">
+              {text.length > 220 ? `${text.slice(0, 220)}…` : text}
+            </p>
+          )}
         </div>
         <span className="text-ink-500 shrink-0 ml-3">{open ? "▲" : "▼"}</span>
       </button>
