@@ -9,7 +9,13 @@ export function anthropic(): Anthropic {
   return _client;
 }
 
-export const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-8";
+// Sonnet is the cost/quality default — Opus is ~5x the price on both input and
+// output for the same tasks, and every AI call in this app re-sends the full
+// business context (profile + knowledge base) as input on every single request
+// (discovery research, one call per scored creator, each generated message),
+// so the model tier is the single biggest lever on API spend. Override with
+// ANTHROPIC_MODEL if a specific team wants Opus's extra polish and accepts the cost.
+export const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
 
 /**
  * Ask Claude for a single JSON object. We instruct strict JSON, then parse the

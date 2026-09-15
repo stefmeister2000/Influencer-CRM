@@ -27,7 +27,7 @@ wiped on every deploy.
 | `DATABASE_PATH` | `/data/orvion.db` |
 | `AUTH_SECRET` | a long random string (e.g. `openssl rand -hex 32`) |
 | `ANTHROPIC_API_KEY` | your Anthropic key (discovery + AI scoring/messages need it) |
-| `ANTHROPIC_MODEL` | `claude-opus-4-8` (optional) |
+| `ANTHROPIC_MODEL` | optional — defaults to `claude-sonnet-5` if unset. Only set this to something else (e.g. `claude-opus-4-8`) if you specifically want Opus's extra polish and accept ~5x the API cost: every AI call (discovery research, one call per scored creator, each generated message) re-sends the full business context, so the model tier drives spend directly. |
 | `DISCOVERY_PROVIDER` | `ai` |
 
 Railway sets `PORT` automatically — do **not** set it yourself.

@@ -68,7 +68,7 @@ A compliant, production-grade internal platform to **discover, categorize, score
 | Language       | TypeScript (strict)                               |
 | Styling        | Tailwind CSS + small design-token layer           |
 | DB / Auth      | Supabase (Postgres + Auth + Storage + RLS)        |
-| AI             | Anthropic Claude API (`claude-opus-4-8` / sonnet) |
+| AI             | Anthropic Claude API (`claude-sonnet-5` by default) |
 | Validation     | Zod                                               |
 | Tables/forms   | Server components + light client islands          |
 | Queue (V2)     | pg_cron / Supabase Edge Functions / external      |
