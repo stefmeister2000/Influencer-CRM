@@ -6,7 +6,10 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: "▦" },
-  { href: "/content", label: "Organic content", icon: "✎" },
+  // Its own accent (violet) — it's a different kind of work (content creation)
+  // from the rest of the influencer-CRM flow, so it should read as distinct
+  // at a glance in the nav, not just another item in the same blue family.
+  { href: "/content", label: "Organic content", icon: "✎", accent: "violet" as const },
   { href: "/campaigns", label: "Discovery & campaigns", icon: "✦" },
   { href: "/influencers", label: "Influencers", icon: "☷" },
   { href: "/send-queue", label: "Send & outreach", icon: "➤" },
@@ -31,13 +34,16 @@ export function Sidebar({ businessName, isPlatformAdmin }: { businessName: strin
           let active = path === item.href || path.startsWith(item.href + "/");
           // The "Discovery & campaigns" item covers both routes.
           if (item.href === "/campaigns" && path.startsWith("/discovery")) active = true;
+          const isAccent = "accent" in item && item.accent === "violet";
           return (
             <Link key={item.href} href={item.href}
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-lg text-sm mb-0.5 transition",
-                active ? "bg-brand-50 text-brand-700 font-medium" : "text-ink-700 hover:bg-slate-50",
+                active
+                  ? (isAccent ? "bg-violet-50 text-violet-700 font-medium" : "bg-brand-50 text-brand-700 font-medium")
+                  : (isAccent ? "text-violet-600 hover:bg-violet-50/60" : "text-ink-700 hover:bg-slate-50"),
               )}>
-              <span className="w-4 text-center opacity-70">{item.icon}</span>
+              <span className={cn("w-4 text-center", isAccent ? "opacity-90" : "opacity-70")}>{item.icon}</span>
               {item.label}
             </Link>
           );

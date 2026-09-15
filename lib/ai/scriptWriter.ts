@@ -44,9 +44,9 @@ your script", no analysis, no citations. Just the content, with line breaks.`;
 function buildSystem(format: ScriptFormat, withSearch: boolean): string {
   const fmt = format === "linkedin" ? LINKEDIN_FORMAT : VIDEO_FORMAT;
   const process = withSearch
-    ? `PROCESS: Do a QUICK web search (1-2 searches, don't over-research) for what is
-currently going viral / trending around this topic — hooks, formats, angles, pain
-points, debates. Pick the single strongest angle, then write ONE piece.`
+    ? `PROCESS: Do ONE quick, well-targeted web search for what is currently going
+viral / trending around this topic — hooks, formats, angles, pain points, debates.
+Pick the single strongest angle, then write ONE piece.`
     : `PROCESS: Use your knowledge of what goes viral around this topic (hooks,
 formats, pain points, debates) to pick the strongest angle, then write ONE piece.`;
   return [PERSONA, process, fmt, COMPLIANCE, OUTPUT].join("\n\n");
@@ -95,13 +95,18 @@ export async function generateScript(args: {
     `\nWhat we want:\n${args.brief.trim() || "(no extra notes — use your best judgment for a high-performing piece)"}\n\n` +
     `Find what's going viral around this right now, then write the single best ${pieceWord}. Make it clearly distinct from any past content listed above. Output only the ${pieceWord}.`;
 
+  // A 15-45s spoken script or an 80-220 word LinkedIn post is a few hundred
+  // tokens at most — this cap is a runaway-output safety ceiling, not a
+  // target, so it's billed only for what the model actually writes.
+  const SCRIPT_MAX_TOKENS = 1200;
+
   // Attempt with the web search tool first.
   try {
     const res = await anthropic().messages.create({
       model: MODEL,
-      max_tokens: 1800,
+      max_tokens: SCRIPT_MAX_TOKENS,
       system: buildSystem(format, true),
-      tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 2 } as any],
+      tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 1 } as any],
       messages: [{ role: "user", content: userPrompt }],
     });
     const text = extractText(res);
@@ -113,7 +118,7 @@ export async function generateScript(args: {
   // Fallback: no tools, rely on model knowledge of viral patterns.
   const res = await anthropic().messages.create({
     model: MODEL,
-    max_tokens: 1600,
+    max_tokens: SCRIPT_MAX_TOKENS,
     system: buildSystem(format, false),
     messages: [{ role: "user", content: userPrompt }],
   });
@@ -141,7 +146,7 @@ export async function translateToDutch(script: string, knowledge?: string): Prom
   if (!aiConfigured()) return script;
   const res = await anthropic().messages.create({
     model: MODEL,
-    max_tokens: 1600,
+    max_tokens: 1200,
     system: DUTCH_SYSTEM,
     messages: [{
       role: "user",
