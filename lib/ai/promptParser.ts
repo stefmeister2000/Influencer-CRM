@@ -11,7 +11,7 @@ Return JSON with EXACTLY these keys:
   "country": string,
   "cities": string[],
   "regions": string[],             // friendly target locations, e.g. ["Austin","Nationwide"]
-  "platforms": string[],           // subset of ["instagram","tiktok"]
+  "platforms": string[],           // subset of ["instagram","tiktok","youtube"]
   "categories": string[],          // creator niches, e.g. food, nightlife, student, sports
   "product_focus": string,         // the business's product/service this targets
   "follower_min": number,
@@ -48,8 +48,8 @@ const FALLBACK: DiscoveryFilters = {
   message_angle: "a strong partnership fit",
 };
 
-const PLATFORMS = ["instagram", "tiktok"] as const;
-const cleanPlatforms = (v: unknown): ("instagram" | "tiktok")[] => {
+const PLATFORMS = ["instagram", "tiktok", "youtube"] as const;
+const cleanPlatforms = (v: unknown): ("instagram" | "tiktok" | "youtube")[] => {
   const arr = Array.isArray(v) ? v.map((x) => String(x).toLowerCase()) : [];
   const picked = PLATFORMS.filter((p) => arr.some((x) => x.includes(p.slice(0, 4))));
   return picked.length ? picked : ["instagram", "tiktok"];

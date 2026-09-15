@@ -6,7 +6,7 @@ import { Avatar, ScoreBadge, StatusBadge, PageHeader } from "@/components/ui";
 import { DecisionButtons } from "@/components/DecisionButtons";
 import { MessageStudio } from "@/components/MessageStudio";
 import { NotesPanel } from "@/components/NotesPanel";
-import { formatNumber, formatPct, formatDate, titleCase } from "@/lib/utils";
+import { formatNumber, formatPct, formatDate, titleCase, platformFullLabel, platformProfileUrl } from "@/lib/utils";
 
 export default function InfluencerDetail({ params }: { params: { id: string } }) {
   const ctx = requireSession();
@@ -15,11 +15,8 @@ export default function InfluencerDetail({ params }: { params: { id: string } })
   const notes = listNotes(params.id);
   const events = listEvents(params.id);
 
-  const isTikTok = /tik/i.test(inf.platform ?? "");
-  const profileHref = inf.profile_url
-    ?? (isTikTok
-      ? `https://www.tiktok.com/@${inf.instagram_username}`
-      : `https://instagram.com/${inf.instagram_username}`);
+  const platformLabel = platformFullLabel(inf.platform);
+  const profileHref = inf.profile_url ?? platformProfileUrl(inf.platform, inf.instagram_username);
 
   return (
     <div>
@@ -28,7 +25,7 @@ export default function InfluencerDetail({ params }: { params: { id: string } })
         subtitle={`@${inf.instagram_username}`}
         action={<a href={profileHref}
           target="_blank" rel="noreferrer" className="btn-ghost">
-          {isTikTok ? "Open TikTok ↗" : "Open Instagram ↗"}
+          Open {platformLabel} ↗
         </a>}
       />
 
@@ -57,7 +54,7 @@ export default function InfluencerDetail({ params }: { params: { id: string } })
               <Row k="WhatsApp" v={inf.whatsapp} />
               <Row k="Website" v={inf.website} />
               <Row k="Language" v={inf.language} />
-              <Row k="Platform" v={isTikTok ? "TikTok" : "Instagram"} />
+              <Row k="Platform" v={platformLabel} />
               <Row k="Category" v={titleCase(inf.category ?? "")} />
               <Row k="Source" v={titleCase(inf.source)} />
             </div>

@@ -45,6 +45,7 @@ function ManualForm({ campaigns, onDone }: { campaigns: Campaign[]; onDone: () =
           <select name="platform" className="input" defaultValue="instagram">
             <option value="instagram">Instagram</option>
             <option value="tiktok">TikTok</option>
+            <option value="youtube">YouTube</option>
           </select>
         </div>
         <Input name="full_name" label="Full name" />
@@ -96,7 +97,7 @@ function CsvForm({ campaigns, onDone }: { campaigns: Campaign[]; onDone: () => v
     <form action={handle} className="space-y-3">
       <h2 className="font-semibold text-lg">Import CSV</h2>
       <p className="text-xs text-ink-500">
-        Columns: username, platform (instagram/tiktok), profile_url, full_name, bio,
+        Columns: username, platform (instagram/tiktok/youtube), profile_url, full_name, bio,
         follower_count, following_count, post_count, engagement_rate, country, city,
         email, whatsapp, category, notes
       </p>

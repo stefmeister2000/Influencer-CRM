@@ -12,7 +12,11 @@ import type { CreatorPlatform, DiscoveryFilters } from "@/lib/types";
 const PLATFORMS: { value: CreatorPlatform; label: string }[] = [
   { value: "instagram", label: "Instagram" },
   { value: "tiktok", label: "TikTok" },
+  { value: "youtube", label: "YouTube" },
 ];
+
+const platformLabel = (p: CreatorPlatform) =>
+  p === "tiktok" ? "TikTok" : p === "youtube" ? "YouTube" : "Instagram";
 
 export function DiscoveryWizard({ locations, categories }: { locations: Tag[]; categories: Tag[] }) {
   const [prompt, setPrompt] = useState("");
@@ -125,7 +129,7 @@ export function DiscoveryWizard({ locations, categories }: { locations: Tag[]; c
             </div>
             <div className="grid grid-cols-2 gap-3">
               <ReadOnly label="Locations" value={(filters.regions?.length ? filters.regions : filters.cities)?.join(", ")} />
-              <ReadOnly label="Platforms" value={(filters.platforms ?? []).map((p) => p === "tiktok" ? "TikTok" : "Instagram").join(", ")} />
+              <ReadOnly label="Platforms" value={(filters.platforms ?? []).map(platformLabel).join(", ")} />
             </div>
             <ReadOnly label="Languages" value={filters.languages?.join(", ")} />
             <div>
@@ -196,9 +200,7 @@ function ReadOnly({ label, value }: { label: string; value?: string }) {
 
 function suggestName(f: DiscoveryFilters, locations: string[], platforms: CreatorPlatform[]): string {
   const loc = locations.length ? locations.join("/") : f.country;
-  const plat = platforms.length === 1
-    ? (platforms[0] === "tiktok" ? "TikTok" : "Instagram")
-    : "IG+TikTok";
+  const plat = platforms.length === 1 ? platformLabel(platforms[0]) : platforms.map(platformLabel).join("+");
   return [loc, f.categories?.[0] ?? "creators", plat]
     .filter(Boolean).join(" · ") || "New campaign";
 }

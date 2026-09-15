@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { anthropic, MODEL, aiConfigured, askJSON } from "../ai/anthropic";
 import type { DiscoveryFilters } from "../types";
-import { normalizeProfileData, type NormalizedProfile, type ProfileProvider, type RecentPost } from "./types";
+import { detectPlatform, normalizeProfileData, type NormalizedProfile, type ProfileProvider, type RecentPost } from "./types";
 import { InstagramGraphProvider } from "./instagramGraph";
 
 /**
@@ -26,9 +26,8 @@ export class AiDiscoveryProvider implements ProfileProvider {
     if (!aiConfigured()) return [];
     const want = Math.min(limit, 25);
 
-    const platforms = (filters.platforms?.length ? filters.platforms : ["instagram", "tiktok"])
-      .map((p) => (p === "tiktok" ? "TikTok" : "Instagram"));
-    const platformList = platforms.join(" and ");
+    const requestedPlatforms = filters.platforms?.length ? filters.platforms : ["instagram", "tiktok"];
+    const platformList = requestedPlatforms.map(platformLabel).join(" and ");
 
     const researchSystem = `You are an influencer researcher for a business
 (described below). Find REAL ${platformList} creators who would be a good fit for
@@ -44,8 +43,10 @@ never invent usernames. Prefer authentic micro/mid creators in the requested
 follower range, in the target locations, and respect exclusions.
 
 Be thorough — list as MANY qualifying real creators as you can find (aim for
-${want}+). For EACH: platform (instagram or tiktok), @handle, name, city, niche,
-rough follower estimate, language, and a short reason they fit.`;
+${want}+). ONLY include creators on ${platformList} — skip anyone on a platform
+that wasn't asked for. For EACH: platform (${requestedPlatforms.join(" or ")}),
+@handle, name, city, niche, rough follower estimate, language, and a short
+reason they fit.`;
 
     // Single research pass — a second pass roughly doubled wall-clock time
     // (was the main reason a run could sit at "Running…" for minutes) for
@@ -75,7 +76,8 @@ rough follower estimate, language, and a short reason they fit.`;
           `De-duplicate by platform+handle. Only include creators with a real-looking @handle ` +
           `that actually appears in the text. Return an object: {"creators":[{` +
           `"platform","instagram_username","full_name","city","category","estimated_followers",` +
-          `"language","why"}]}. "platform" is "instagram" or "tiktok" (infer from the source/URL). ` +
+          `"language","why"}]}. "platform" is one of "instagram", "tiktok" or "youtube" (infer from ` +
+          `the source/URL — a youtube.com/@handle or youtu.be link is "youtube"). ` +
           `estimated_followers is a number (convert "25k" to 25000). ` +
           `Omit anyone without a handle. Include as many as are present.`,
         user: research,
@@ -90,7 +92,7 @@ rough follower estimate, language, and a short reason they fit.`;
     return items
       .filter((it) => it && typeof it.instagram_username === "string")
       .filter((it) => {
-        const plat = /tik/i.test(String(it.platform ?? "")) ? "tiktok" : "instagram";
+        const plat = detectPlatform(it.platform);
         const u = plat + ":" + String(it.instagram_username).replace(/^@/, "").toLowerCase().trim();
         if (u.endsWith(":") || seen.has(u)) return false;
         seen.add(u);
@@ -100,7 +102,7 @@ rough follower estimate, language, and a short reason they fit.`;
       .map((it) =>
         normalizeProfileData({
           instagram_username: String(it.instagram_username).replace(/^@/, "").trim(),
-          platform: /tik/i.test(String(it.platform ?? "")) ? "tiktok" : "instagram",
+          platform: detectPlatform(it.platform),
           full_name: it.full_name ?? null,
           city: it.city ?? null,
           country: filters.country || null,
@@ -111,7 +113,11 @@ rough follower estimate, language, and a short reason they fit.`;
           source: "provider",
         }),
       )
-      .filter((p) => p.instagram_username.length > 0 && p.instagram_username !== "handle");
+      .filter((p) => p.instagram_username.length > 0 && p.instagram_username !== "handle")
+      // The model sometimes mistags a result — without this, anything it doesn't
+      // confidently tag as the requested platform falls back to "instagram" and
+      // silently pollutes a TikTok-only (or YouTube-only) request. Enforce it.
+      .filter((p) => !filters.platforms?.length || filters.platforms.includes(p.platform as any));
   }
 
   // Single-profile enrich/metrics fall back to the Graph API if configured.
@@ -127,7 +133,7 @@ rough follower estimate, language, and a short reason they fit.`;
 
   private briefFromFilters(f: DiscoveryFilters, want: number): string {
     const platforms = (f.platforms?.length ? f.platforms : ["instagram", "tiktok"])
-      .map((p) => (p === "tiktok" ? "TikTok" : "Instagram")).join(" and ");
+      .map(platformLabel).join(" and ");
     const locations = f.regions?.length
       ? f.regions.join(", ")
       : [f.country, ...(f.cities ?? [])].filter(Boolean).join(", ");
@@ -165,4 +171,8 @@ rough follower estimate, language, and a short reason they fit.`;
     if (m[2] === "m") n *= 1_000_000;
     return Math.round(n);
   }
+}
+
+function platformLabel(p: string): string {
+  return p === "tiktok" ? "TikTok" : p === "youtube" ? "YouTube" : "Instagram";
 }

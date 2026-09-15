@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { platformProfileUrl } from "@/lib/utils";
 
 /** Copy the @handle and open the creator's profile — for fast manual outreach. */
 export function HandleActions({
@@ -14,9 +15,9 @@ export function HandleActions({
   const clean = username.replace(/^@/, "");
   const pad = size === "md" ? "px-2 py-1" : "px-1.5 py-0.5";
   const isTikTok = /tik/i.test(platform);
-  const href = isTikTok
-    ? `https://www.tiktok.com/@${clean}`
-    : `https://instagram.com/${clean}`;
+  const isYouTube = /you\s*tube|^yt$/i.test(platform);
+  const label = isTikTok ? "TikTok" : isYouTube ? "YouTube" : "Instagram";
+  const href = platformProfileUrl(platform, clean);
 
   return (
     <span className="inline-flex items-center gap-1">
@@ -38,11 +39,11 @@ export function HandleActions({
         href={href}
         target="_blank"
         rel="noreferrer"
-        title={isTikTok ? "Open profile on TikTok" : "Open profile on Instagram"}
+        title={`Open profile on ${label}`}
         onClick={(e) => e.stopPropagation()}
         className={`rounded border border-slate-200 ${pad} text-xs text-ink-600 hover:bg-slate-50`}
       >
-        {isTikTok ? "TikTok ↗" : "IG ↗"}
+        {isTikTok ? "TikTok ↗" : isYouTube ? "YouTube ↗" : "IG ↗"}
       </a>
     </span>
   );

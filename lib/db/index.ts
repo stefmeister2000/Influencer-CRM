@@ -87,7 +87,7 @@ create table if not exists influencers (
   team_id text not null references teams(id),
   campaign_id text references campaigns(id),
   instagram_username text not null,
-  platform text not null default 'instagram',   -- instagram | tiktok
+  platform text not null default 'instagram',   -- instagram | tiktok | youtube
   profile_url text, full_name text, bio text, profile_picture_url text,
   follower_count integer, following_count integer, post_count integer,
   avg_likes real, avg_comments real, engagement_rate real,
@@ -314,7 +314,7 @@ function sleepSync(ms: number) {
 function runMigrations(db: DB) {
   ensureColumn(db, "content_scripts", "language", "text default 'en'");
   ensureColumn(db, "content_scripts", "format", "text default 'video'");
-  // Instagram + TikTok: which platform a creator's handle belongs to.
+  // Instagram, TikTok or YouTube: which platform a creator's handle belongs to.
   ensureColumn(db, "influencers", "platform", "text default 'instagram'");
   ensureColumn(db, "users", "is_platform_admin", "integer not null default 0");
 

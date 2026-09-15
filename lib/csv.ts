@@ -1,5 +1,6 @@
 import type { NormalizedProfile } from "./providers/types";
 import { normalizeProfileData } from "./providers/types";
+import type { CreatorPlatform } from "./types";
 
 /** Minimal, dependency-free RFC-4180-ish CSV parser (handles quotes + commas). */
 export function parseCsv(text: string): Record<string, string>[] {
@@ -44,7 +45,8 @@ export function csvRowToProfile(row: Record<string, string>): NormalizedProfile 
   if (!username) return null;
   return normalizeProfileData({
     instagram_username: username,
-    platform: /tik/i.test(row.platform || "") ? "tiktok" : "instagram",
+    // Any raw value works — normalizeProfileData() below detects tiktok/youtube/instagram from it.
+    platform: (row.platform || "instagram") as CreatorPlatform,
     profile_url: row.profile_url || null,
     full_name: row.full_name || null,
     bio: row.bio || null,

@@ -7,7 +7,7 @@ import {
 } from "@/app/actions/influencers";
 import { Avatar, StatusBadge, ScoreBadge } from "@/components/ui";
 import { HandleActions } from "@/components/HandleActions";
-import { formatNumber, formatPct, titleCase } from "@/lib/utils";
+import { formatNumber, formatPct, titleCase, platformShortLabel } from "@/lib/utils";
 import type { Influencer, UserRole, FilterParams } from "@/lib/types";
 import { can } from "@/lib/permissions";
 
@@ -132,7 +132,7 @@ export function InfluencerTable({
                       <div className="flex items-center gap-1.5">
                         <span className="text-xs text-ink-500 truncate">@{i.instagram_username}</span>
                         <span className="badge bg-slate-100 text-slate-600 text-[10px] uppercase">
-                          {/tik/i.test(i.platform ?? "") ? "TikTok" : "IG"}
+                          {platformShortLabel(i.platform)}
                         </span>
                         <HandleActions username={i.instagram_username} platform={i.platform} />
                       </div>

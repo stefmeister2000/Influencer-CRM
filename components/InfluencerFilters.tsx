@@ -35,6 +35,7 @@ export function InfluencerFilters({
         <option value="">Any platform</option>
         <option value="instagram">Instagram</option>
         <option value="tiktok">TikTok</option>
+        <option value="youtube">YouTube</option>
       </select>
 
       <select className="input" defaultValue={current.status ?? ""}

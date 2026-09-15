@@ -1,4 +1,4 @@
-import type { DiscoveryFilters, Influencer } from "../types";
+import type { CreatorPlatform, DiscoveryFilters, Influencer } from "../types";
 
 /** A normalized profile shape every provider must emit. */
 export type NormalizedProfile = Partial<Influencer> & {
@@ -31,14 +31,24 @@ export interface ProfileProvider {
   fetchBasicMetrics(username: string): Promise<Partial<NormalizedProfile>>;
 }
 
+/** Detect a platform from any raw label ("TikTok", "yt", a URL, etc.) — defaults to Instagram. */
+export function detectPlatform(raw: unknown): CreatorPlatform {
+  const s = String(raw ?? "");
+  if (/tik\s*tok|tiktok|^tt$/i.test(s)) return "tiktok";
+  if (/you\s*tube|youtube\.com|youtu\.be|^yt$/i.test(s)) return "youtube";
+  return "instagram";
+}
+
 /** Normalize a raw profile: clean the handle, set platform + a canonical URL. */
 export function normalizeProfileData(p: NormalizedProfile): NormalizedProfile {
   const out = { ...p };
   out.instagram_username = out.instagram_username.trim().replace(/^@/, "").toLowerCase();
-  out.platform = /tik\s*tok|tiktok|^tt$/i.test(String(out.platform ?? "")) ? "tiktok" : "instagram";
+  out.platform = detectPlatform(out.platform);
   if (!out.profile_url) {
     out.profile_url = out.platform === "tiktok"
       ? `https://www.tiktok.com/@${out.instagram_username}`
+      : out.platform === "youtube"
+      ? `https://www.youtube.com/@${out.instagram_username}`
       : `https://instagram.com/${out.instagram_username}`;
   }
   if (out.engagement_rate == null && out.follower_count && (out.avg_likes || out.avg_comments)) {

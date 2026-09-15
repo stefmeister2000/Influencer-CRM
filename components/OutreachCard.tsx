@@ -9,7 +9,7 @@ import {
 } from "@/app/actions/messages";
 import { Avatar } from "@/components/ui";
 import { HandleActions } from "@/components/HandleActions";
-import { titleCase } from "@/lib/utils";
+import { titleCase, platformProfileUrl } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
 import { can } from "@/lib/permissions";
 
@@ -35,18 +35,21 @@ export function OutreachCard({ item, role, businessName }: { item: Item; role: U
 
   const handle = (inf?.instagram_username ?? "").replace(/^@/, "");
   const isTikTok = /tik/i.test(inf?.platform ?? "");
+  const isYouTube = /you\s*tube|^yt$/i.test(inf?.platform ?? "");
+  const platformName = isTikTok ? "TikTok" : isYouTube ? "YouTube" : "Instagram";
   const waNumber = (inf?.whatsapp ?? "").replace(/[^\d]/g, "");
   const subject = businessName?.trim()
     ? `Quick idea for a partnership with ${businessName.trim()}`
     : "Quick idea for a partnership";
 
-  // Neither IG nor TikTok pre-fills DM text — copy the message, THEN open the DM/profile.
+  // None of these platforms pre-fill DM text from a URL — copy the message,
+  // THEN open the DM/profile/channel so it can be pasted by hand.
   function dmCreator() {
     navigator.clipboard.writeText(body);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
-    const url = isTikTok
-      ? `https://www.tiktok.com/@${handle}`
+    const url = isTikTok || isYouTube
+      ? platformProfileUrl(inf?.platform, handle)
       : `https://ig.me/m/${handle}`;
     window.open(url, "_blank", "noopener");
   }
@@ -61,7 +64,7 @@ export function OutreachCard({ item, role, businessName }: { item: Item; role: U
               {inf?.full_name ?? inf?.instagram_username}
             </Link>
             <span className="text-xs text-ink-500">@{inf?.instagram_username} · {titleCase(item.kind)} · {item.channel}</span>
-            <HandleActions username={inf?.instagram_username ?? ""} />
+            <HandleActions username={inf?.instagram_username ?? ""} platform={inf?.platform ?? undefined} />
             <span className="badge bg-brand-50 text-brand-700">{titleCase(item.state)}</span>
           </div>
 
@@ -100,8 +103,8 @@ export function OutreachCard({ item, role, businessName }: { item: Item; role: U
           <div className="flex flex-wrap gap-2 mt-3">
             <button className="btn-primary py-1 text-xs" onClick={dmCreator}>
               {copied
-                ? (isTikTok ? "Copied — paste in TikTok" : "Copied — paste in IG (⌘V)")
-                : (isTikTok ? "Open TikTok →" : "DM on Instagram →")}
+                ? (isTikTok || isYouTube ? `Copied — paste in ${platformName}` : "Copied — paste in IG (⌘V)")
+                : (isTikTok || isYouTube ? `Open ${platformName} →` : "DM on Instagram →")}
             </button>
             {waNumber && (
               <a className="btn-ghost py-1 text-xs text-emerald-700" target="_blank" rel="noreferrer"

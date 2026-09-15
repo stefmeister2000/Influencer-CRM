@@ -27,7 +27,7 @@ export type MessageState =
 
 export type SourceKind = "manual" | "csv" | "instagram_graph" | "provider";
 
-export type CreatorPlatform = "instagram" | "tiktok";
+export type CreatorPlatform = "instagram" | "tiktok" | "youtube";
 
 export type ProductFocus =
   | "hair_loss" | "mens_health" | "weight_loss" | "wellness" | string;

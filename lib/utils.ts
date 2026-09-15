@@ -2,6 +2,28 @@ export function cn(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(" ");
 }
 
+/** Short display label for a creator's platform, e.g. for compact table badges. */
+export function platformShortLabel(platform?: string | null): string {
+  if (/tik/i.test(platform ?? "")) return "TikTok";
+  if (/you\s*tube|^yt$/i.test(platform ?? "")) return "YouTube";
+  return "IG";
+}
+
+/** Full display label for a creator's platform. */
+export function platformFullLabel(platform?: string | null): string {
+  if (/tik/i.test(platform ?? "")) return "TikTok";
+  if (/you\s*tube|^yt$/i.test(platform ?? "")) return "YouTube";
+  return "Instagram";
+}
+
+/** Public profile URL for a creator on their platform. */
+export function platformProfileUrl(platform: string | null | undefined, handle: string): string {
+  const clean = handle.replace(/^@/, "");
+  if (/tik/i.test(platform ?? "")) return `https://www.tiktok.com/@${clean}`;
+  if (/you\s*tube|^yt$/i.test(platform ?? "")) return `https://www.youtube.com/@${clean}`;
+  return `https://instagram.com/${clean}`;
+}
+
 export function formatNumber(n: number | null | undefined): string {
   if (n == null) return "—";
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
