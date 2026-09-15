@@ -326,6 +326,14 @@ function runMigrations(db: DB) {
     where id = (select id from users order by created_at asc limit 1)
       and (select count(*) from users where is_platform_admin = 1) = 0
   `);
+
+  // Guard against the "earliest signup" heuristic above having picked an
+  // orphaned/test account instead: the known O'Learys owner account always
+  // gets platform admin too. Safe to run on every boot — no-op once set.
+  db.exec(`
+    update users set is_platform_admin = 1
+    where lower(email) = 'marketing@olearys.be' and is_platform_admin = 0
+  `);
 }
 
 function ensureColumn(db: DB, table: string, column: string, ddl: string) {
